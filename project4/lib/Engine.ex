@@ -1,64 +1,36 @@
-defmodule MainController do
+defmodule Engine do
 use GenServer
 # entry point to the code. Read command line arguments and invoke the right things here.
   # Entry point to the code. 
-  def main(args) do
-   [nNodes,topology,algorithm] = args
-   numNodes=nNodes|>String.to_integer()
-
-   if topology == "2D" or topology == "imp2D" do
-       #Readjust the number of nodes.
-       sqrt = :math.sqrt(numNodes)|> Float.ceil|> round
-       numNodes = sqrt*sqrt
-   end
- 
-   map=%{}
-   nodeList=Enum.to_list(1..numNodes)
-   map = loadGenservers(nodeList, topology, numNodes, algorithm, %{})
+  def main() do
+   hashtagMap=%{}
+   mentionsMap=%{}
+   statusTable = %{}
+   tweetsDB = {}
 
   # Start gen server
-   start_link(map, numNodes, algorithm)
-
-   GenServer.cast(:main_server, {:initiateProtocol, map})
+   start_link(statusTable, tweetsDB, hashtagMap, mentionsMap)
 
     :timer.sleep(:infinity)
-
-   #Gossip.Supervisor.start_link(numNodes,topology,algorithm)
-  end
-
-  def loadGenservers([nodeId|nodeList], topology, numNodes, algorithm, map) do
-   {_, pid} = GossipNode.start_link(nodeId, topology, numNodes, algorithm)
-   map = Map.put(map,pid,nodeId)
-   loadGenservers(nodeList, topology, numNodes, algorithm, map)
-  end
-
-  def loadGenservers([], topology, numNodes, algorithm, map) do
-    map
   end
   
-  def start_link(map, numNodes, algorithm) do
-  GenServer.start_link(MainController, [map, numNodes, algorithm, 0, DateTime.utc_now], name: :main_server)
+  def start_link(statusTable, tweetsDB, hashtagMap, mentionsMap) do
+      GenServer.start_link(Engine, [statusTable, tweetsDB, hashtagMap, mentionsMap], name: :main_server)
   end
 
-    def init(map, numNodes, algorithm, count, starttime) do
-      {:ok, {map, numNodes, algorithm, count, starttime}}
+  def init(statusTable, tweetsDB, hashtagMap, mentionsMap) do
+      {:ok, {statusTable, tweetsDB, hashtagMap, mentionsMap}}
   end
 
-  def handle_cast({:iDied, pid}, state) do
-    [map, numNodes, algorithm, count, starttime] = state
-    if  Map.has_key?(map, pid) do
-    # IO.inspect pid
-      map = Map.delete(map, pid)
-      
-      count = count + 1
-      spawn(fn->GenServer.cast(:main_server, {:initiateProtocol, map})end)
-    # if count >= Float.floor(0.50*numNodes) do
-    #     diff =  DateTime.diff(DateTime.utc_now, starttime, :millisecond)
-    #     IO.puts "Most nodes have died. Shutting down the protocol.. Convergence took #{diff} milliseconds."
-    #     Process.exit(self(), :shutdown)
-    # end
-    end 
-    {:noreply, [map, numNodes, algorithm,count, starttime]}
+  def handle_cast({:registerMe, username}, state) do
+    [statusTable, tweetsDB, hashtagMap, mentionsMap] = state
+    if  Map.has_key?(statusTable, username) do
+       IO.puts "#{username} is an existing user."
+    else
+       IO.puts "#{username} is an NEW user... Updating the tables now.."
+       statusTable = Map.put(statusTable, username, MapSet.new)
+    end
+    {:noreply, [statusTable, tweetsDB, hashtagMap, mentionsMap]}
   end
 
   def handle_cast({:initiateProtocol, map}, state) do
