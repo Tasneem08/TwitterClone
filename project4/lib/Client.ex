@@ -11,7 +11,7 @@
       # clientMainMethod(String.duplicate("0", k), min_val, max_val, ipAddr)
     #   GenServer.cast()
       
-    end
+
   end
 
 
