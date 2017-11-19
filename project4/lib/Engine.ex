@@ -72,7 +72,7 @@ use GenServer
       hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
       
       #broadcast 
-      sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), content)
+      sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), username, content)
 
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
@@ -91,12 +91,12 @@ use GenServer
       {:reply, hashtagTweets, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
 
-  def sendToFollowers([first | followers], content) do
-      GenServer.cast(String.to_atom(first),{:receiveTweet, content}) 
-      sendToFollowers(followers, content)
+  def sendToFollowers([first | followers], username, content) do
+      GenServer.cast(String.to_atom(first),{:receiveTweet, username, content}) 
+      sendToFollowers(followers, username, content)
   end
   
-  def sendToFollowers([], _) do
+  def sendToFollowers([], _, _) do
   end
 
   def getHashtags(tweetsDB, [index | rest], hashtagTweets) do

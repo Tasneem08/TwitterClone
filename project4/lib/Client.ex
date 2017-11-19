@@ -3,8 +3,22 @@
   defmodule Client do
   use GenServer
 
+  def start_link(username) do
+      GenServer.start_link(Client, name: String.to_atom(username))
+  end
+
+  def init() do
+      {:ok}
+  end
+
+  def handle_cast({:receiveTweet, tweeter, content}, state) do
+      IO.puts "#{tweeter} posted a new tweet : #{content}"
+      {:noreply, state}
+  end
+
   def register_user(username) do
-    # username = String.to_atom("mmathkar"<>(:erlang.monotonic_time() |> :erlang.phash2(256) |> Integer.to_string(16))<>"@"<>findIP())
+    start_link(username)
+    #username = String.to_atom("mmathkar"<>(:erlang.monotonic_time() |> :erlang.phash2(256) |> Integer.to_string(16))<>"@"<>findIP())
     GenServer.cast(:main_server,{:registerMe, username})    
     
   end
@@ -13,7 +27,7 @@
     GenServer.cast(:main_server,{:subscribeTo, selfId, username}) 
   end
 
-  def search_by_hashtags(hashtag, username) do
+  def search_by_hashtags(hashtag) do
     hashtag_list = GenServer.call(:main_server,{:tweetsWithHashtag, hashtag})
     hashtag_list
   end
