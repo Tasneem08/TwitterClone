@@ -5,21 +5,23 @@
 
   def register_user() do
     username = String.to_atom("mmathkar"<>(:erlang.monotonic_time() |> :erlang.phash2(256) |> Integer.to_string(16))<>"@"<>findIP())
-    GenServer.cast(username,{:registerMe, username})    
+    GenServer.cast(:main_server,{:registerMe, username})    
     
   end
 
   def subscribe_to(username) do
-    GenServer.cast(username,{:registerMe, username}) 
+    GenServer.cast(:main_server,{:subscribeTo, username}) 
   end
 
-  def search_by_hashtags(hashtag) do
-    GenServer.cast()
+  def search_by_hashtags(hashtag,selfId, username) do
+    GenServer.cast(:main_server,{})
   end
 
+  def unsubscribe(hashtag,selfId, username) do
+    GenServer.cast(:main_server,{:unsubscribeTo, selfId, username})
+  end
 
-
-
+  
 
    # Returns the IP address of the machine the code is being run on.
   def findIP do
