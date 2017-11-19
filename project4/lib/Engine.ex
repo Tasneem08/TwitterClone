@@ -2,7 +2,8 @@ defmodule Engine do
 use GenServer
 # entry point to the code. Read command line arguments and invoke the right things here.
   # Entry point to the code. 
-  def main() do
+  def main(args) do
+      total = List.first(args) |> String.to_integer()
       hashtagMap = %{}
       mentionsMap = %{}
       followersTable = %{}
@@ -11,7 +12,8 @@ use GenServer
 
       # Start gen server
       start_link(followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap)
-
+      Simulator.simulate(total)
+      
      :timer.sleep(:infinity)
   end
   
