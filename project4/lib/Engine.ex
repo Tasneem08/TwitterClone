@@ -72,7 +72,30 @@ use GenServer
       hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
       
       #broadcast 
-      sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), username, content)
+      sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, content)
+
+      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
+  end
+
+    def handle_cast({:reTweet, username, tweetIndex}, state) do
+      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
+      #{content, hashtags, mentions} = tweetBody
+      # insert into tweetsDB get size - index / key. insert value mei tuple.
+      {original_tweeter, content} = Map.get(tweetsDB, tweetIndex)
+      {original_tweeter, content} = 
+      if is_tuple(content) do 
+            {original_tweeter, content} = content
+      else
+            {original_tweeter, content}
+      end
+      
+      index = Kernel.map_size(tweetsDB)
+      tweetsDB = Map.put(tweetsDB, index, {username, {original_tweeter, content}})
+      #mentionsMap = updateMentionsMap(mentionsMap, mentions, index)
+      #hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
+      
+      #broadcast 
+      sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, {original_tweeter, content})
 
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
@@ -113,16 +136,16 @@ use GenServer
         relevantTweets
   end
 
-  def sendToFollowers([first | followers], username, content) do
-      GenServer.cast(String.to_atom(first),{:receiveTweet, username, content}) 
-      sendToFollowers(followers, username, content)
+  def sendToFollowers([first | followers], index, username, content) do
+      GenServer.cast(String.to_atom(first),{:receiveTweet, index, username, content}) 
+      sendToFollowers(followers, index, username, content)
   end
   
-  def sendToFollowers([], _, _) do
+  def sendToFollowers([], _, _, _) do
   end
 
   def getHashtags(tweetsDB, [index | rest], hashtagTweets) do
-      hashtagTweets = Enum.concat(Map.get(tweetsDB, index), hashtagTweets)
+      hashtagTweets = Enum.concat({index, Map.get(tweetsDB, index)}, hashtagTweets)
       getHashtags(tweetsDB, rest, hashtagTweets)
   end
 
@@ -131,7 +154,7 @@ use GenServer
   end
 
   def getMentions(tweetsDB, [index | rest], mentionedTweets) do
-      mentionedTweets = Enum.concat(Map.get(tweetsDB, index), mentionedTweets)
+      mentionedTweets = Enum.concat({index, Map.get(tweetsDB, index)}, mentionedTweets)
       getMentions(tweetsDB, rest, mentionedTweets)
   end
 

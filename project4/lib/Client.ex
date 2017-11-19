@@ -11,8 +11,13 @@
       {:ok}
   end
 
-  def handle_cast({:receiveTweet, tweeter, content}, state) do
-      IO.puts "#{tweeter} posted a new tweet : #{content}"
+  def handle_cast({:receiveTweet, index, tweeter, content}, state) do
+      if is_tuple(content) do
+        {org_tweeter, text} = content
+        IO.puts "#{tweeter} retweeted #{org_tweeter} ka post : #{text}"
+      else
+        IO.puts "#{tweeter} posted a new tweet : #{content}"
+      end
       {:noreply, state}
   end
 
@@ -21,6 +26,10 @@
     #username = String.to_atom("mmathkar"<>(:erlang.monotonic_time() |> :erlang.phash2(256) |> Integer.to_string(16))<>"@"<>findIP())
     GenServer.cast(:main_server,{:registerMe, username})    
     
+  end
+
+  def retweet(selfId, tweetIndex) do
+    GenServer.cast(:main_server,{:reTweet, selfId, tweetIndex}) 
   end
 
   def subscribe_to(selfId, username) do
@@ -41,6 +50,7 @@
     tweets_list=GenServer.call(:main_server,{:queryTweets, username})
     tweets_list
   end
+
   def tweet(username, tweet_content) do
 
 #    {content, hashtags, mentions} = tweetBody
