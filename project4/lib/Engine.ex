@@ -57,4 +57,53 @@ use GenServer
       {:noreply, [statusTable, tweetsDB, hashtagMap, mentionsMap]}
   end
 
+  def handle_call({:myMentions, username}, state) do
+      [statusTable, tweetsDB, hashtagMap, mentionsMap] = state
+      mentions = Map.get(mentionsMap, username)
+      mentionedTweets = getMentions(tweetsDB, MapSet.to_list(mentions), [])
+      {:reply, [statusTable, tweetsDB, hashtagMap, mentionsMap]}
+  end
+
+  def getMentions(tweetsDB, [index | rest], mentionedTweets) do
+      
+  end
+
+  def getMentions(_, [], mentionedTweets) do
+    mentionedTweets
+  end
+
+  def updateMentionsMap(mentionsMap, [mention | mentions], index) do
+      elems = 
+      if Map.has_key?(mentionsMap, mention) do
+        element = Map.get(mentionsMap, mention)
+        MapSet.put(element, index)
+      else
+        element = MapSet.new
+        MapSet.put(element, index)
+      end
+      mentionsMap = Map.put(mentionsMap, mention, elems)
+      updateMentionsMap(mentionsMap, mentions, index)
+  end
+
+  def updateMentionsMap(mentionsMap, [], _) do
+      mentionsMap
+  end
+
+  def updateHashTagMap(hashtagMap, [hashtag | hashtags], index) do
+      elems = 
+      if Map.has_key?(hashtagMap, hashtag) do
+        element = Map.get(hashtagMap, hashtag)
+        MapSet.put(element, index)
+      else
+        element = MapSet.new
+        MapSet.put(element, index)
+      end
+      hashtagMap = Map.put(hashtagMap, hashtag, elems)
+      updateHashTagMap(hashtagMap, hashtags, index)
+  end
+
+  def updateHashTagMap(hashtagMap, [], _) do
+      hashtagMap
+  end
+
 end
