@@ -24,11 +24,13 @@ use GenServer
 
   def handle_cast({:registerMe, username}, state) do
       [statusTable, tweetsDB, hashtagMap, mentionsMap] = state
+      statusTable = 
       if Map.has_key?(statusTable, username) do
         IO.puts "#{username} is an existing user."
+        statusTable
       else
         IO.puts "#{username} is an NEW user... Updating the tables now.."
-        statusTable = Map.put(statusTable, username, MapSet.new)
+        Map.put(statusTable, username, MapSet.new)
       end
       {:noreply, [statusTable, tweetsDB, hashtagMap, mentionsMap]}
   end
@@ -52,8 +54,12 @@ use GenServer
   def handle_cast({:tweet, username, tweetBody}, state) do
       [statusTable, tweetsDB, hashtagMap, mentionsMap] = state
       {content, hashtags, mentions} = tweetBody
-      
-      
+      # insert into tweetsDB get size - index / key. insert value mei tuple.
+
+      index = Kernel.map_size(tweetsDB)
+      tweetsDB = Map.put(tweetsDB, index, {username, content})
+      mentionsMap = updateMentionsMap(mentionsMap, mentions, index)
+      hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
       {:noreply, [statusTable, tweetsDB, hashtagMap, mentionsMap]}
   end
 
@@ -61,11 +67,28 @@ use GenServer
       [statusTable, tweetsDB, hashtagMap, mentionsMap] = state
       mentions = Map.get(mentionsMap, username)
       mentionedTweets = getMentions(tweetsDB, MapSet.to_list(mentions), [])
-      {:reply, [statusTable, tweetsDB, hashtagMap, mentionsMap]}
+      {:reply, mentionedTweets, [statusTable, tweetsDB, hashtagMap, mentionsMap]}
+  end
+
+  def handle_call({:tweetsWithHashtag, hashtag}, state) do
+      [statusTable, tweetsDB, hashtagMap, mentionsMap] = state
+      tweets = Map.get(hashtagMap, hashtag)
+      hashtagTweets = getHashtags(tweetsDB, MapSet.to_list(tweets), [])
+      {:reply, hashtagTweets, [statusTable, tweetsDB, hashtagMap, mentionsMap]}
+  end
+
+  def getHashtags(tweetsDB, [index | rest], hashtagTweets) do
+      hashtagTweets = Enum.concat(Map.get(tweetsDB, index), hashtagTweets)
+      getHashtags(tweetsDB, rest, hashtagTweets)
+  end
+
+  def getHashtags(_, [], hashtagTweets) do
+      hashtagTweets
   end
 
   def getMentions(tweetsDB, [index | rest], mentionedTweets) do
-      
+      mentionedTweets = Enum.concat(Map.get(tweetsDB, index), mentionedTweets)
+      getMentions(tweetsDB, rest, mentionedTweets)
   end
 
   def getMentions(_, [], mentionedTweets) do
