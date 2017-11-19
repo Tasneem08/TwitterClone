@@ -17,6 +17,11 @@
     GenServer.cast(:main_server,{})
   end
 
+  def getMyMentions(username) do
+    mentions_list=GenServer.call(:main_server,{:myMentions, username})
+    mentions_list
+  end
+
   def tweet(username, tweet_content) do
 
 #    {content, hashtags, mentions} = tweetBody
