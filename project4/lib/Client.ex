@@ -13,8 +13,9 @@
     GenServer.cast(:main_server,{:subscribeTo, selfId, username}) 
   end
 
-  def search_by_hashtags(hashtag,selfId, username) do
-    GenServer.cast(:main_server,{})
+  def search_by_hashtags(hashtag, username) do
+    hashtag_list = GenServer.call(:main_server,{:tweetsWithHashtag, hashtag})
+    hashtag_list
   end
 
   def getMyMentions(username) do
@@ -37,10 +38,10 @@
 
   def findHashTags([head|tail],hashList) do
     if(String.first(head)=="#") do
-      findHashTags([tail],Enum.concat(head,hashList))
+      findHashTags(tail,Enum.concat(head,hashList))
 
     else 
-      findHashTags([tail],hashList)
+      findHashTags(tail,hashList)
     end
 
   end
@@ -51,10 +52,10 @@
 
   def findMentions([head|tail],mentionList) do
     if(String.first(head)=="@") do
-      findMentions([tail],Enum.concat(head,mentionList))
+      findMentions(tail,Enum.concat(head,mentionList))
 
     else 
-      findMentions([tail],mentionList)
+      findMentions(tail,mentionList)
     end
 
   end
@@ -64,29 +65,29 @@
   end
 
 
-  def unsubscribe(hashtag,selfId, username) do
+  def unsubscribe(selfId, username) do
     GenServer.cast(:main_server,{:unsubscribeTo, selfId, username})
   end
 
   
 
    # Returns the IP address of the machine the code is being run on.
-  def findIP do
-    {ops_sys, extra } = :os.type
-    ip = 
-    case ops_sys do
-      :unix -> 
-            if extra == :linux do
-              {:ok, [addr: ip]} = :inet.ifget('ens3', [:addr])
-              to_string(:inet.ntoa(ip))
-            else
-              {:ok, [addr: ip]} = :inet.ifget('en0', [:addr])
-              to_string(:inet.ntoa(ip))
-            end
-      :win32 -> {:ok, [ip, _]} = :inet.getiflist
-               to_string(ip)
-    end
-  (ip)
-  end
+  # def findIP do
+  #   {ops_sys, extra } = :os.type
+  #   ip = 
+  #   case ops_sys do
+  #     :unix -> 
+  #           if extra == :linux do
+  #             {:ok, [addr: ip]} = :inet.ifget('ens3', [:addr])
+  #             to_string(:inet.ntoa(ip))
+  #           else
+  #             {:ok, [addr: ip]} = :inet.ifget('en0', [:addr])
+  #             to_string(:inet.ntoa(ip))
+  #           end
+  #     :win32 -> {:ok, [ip, _]} = :inet.getiflist
+  #              to_string(ip)
+  #   end
+  # (ip)
+  # end
 
   end
