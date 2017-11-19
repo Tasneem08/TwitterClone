@@ -78,17 +78,39 @@ use GenServer
   end
 
   def handle_call({:myMentions, username}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
+      [_, _, tweetsDB, _, mentionsMap] = state
       mentions = Map.get(mentionsMap, username)
       mentionedTweets = getMentions(tweetsDB, MapSet.to_list(mentions), [])
-      {:reply, mentionedTweets, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
+      {:reply, mentionedTweets, state}
   end
 
   def handle_call({:tweetsWithHashtag, hashtag}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
+      [_, _, tweetsDB, hashtagMap, _] = state
       tweets = Map.get(hashtagMap, hashtag)
       hashtagTweets = getHashtags(tweetsDB, MapSet.to_list(tweets), [])
-      {:reply, hashtagTweets, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
+      {:reply, hashtagTweets, state}
+  end
+
+  def handle_call({:queryTweets, username}, state) do
+      [_, followsTable, tweetsDB, _, _] = state
+      mapSet = Map.get(followsTable, username) 
+      relevantTweets = fetchRelevantTweets(Map.to_list(tweetsDB), mapSet, [])
+      {:reply, relevantTweets, state}
+  end
+  
+  def fetchRelevantTweets([firstTweet |tweetsDB], mapSet, relevantTweets) do
+        {_, {tweeter,content}} = firstTweet
+        relevantTweets = 
+        if MapSet.member?(mapSet, tweeter) do
+            Enum.concat({tweeter, content}, relevantTweets)
+        else
+            relevantTweets
+        end
+        fetchRelevantTweets(tweetsDB, mapSet, relevantTweets)
+  end
+
+  def fetchRelevantTweets([], _, relevantTweets) do
+        relevantTweets
   end
 
   def sendToFollowers([first | followers], username, content) do

@@ -37,6 +37,10 @@
     mentions_list
   end
 
+  def queryTweets(username) do
+    tweets_list=GenServer.call(:main_server,{:queryTweets, username})
+    tweets_list
+  end
   def tweet(username, tweet_content) do
 
 #    {content, hashtags, mentions} = tweetBody
