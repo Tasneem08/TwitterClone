@@ -1,17 +1,20 @@
   # Sets up the worker/ Client
 
   defmodule Client do
+  use GenServer
 
-  def register_user(ipAddr) do
-    local_node_name = String.to_atom("mmathkar"<>(:erlang.monotonic_time() |> :erlang.phash2(256) |> Integer.to_string(16))<>"@"<>findIP())
-    # Node.start(local_node_name)
-    # Node.set_cookie(String.to_atom("monster"))
-    # if Node.connect(String.to_atom("muginu@"<>ipAddr)) == true do
-      # {{max_val, min_val}, k} = get_work(ipAddr)
-      # clientMainMethod(String.duplicate("0", k), min_val, max_val, ipAddr)
-    #   GenServer.cast()
-      
-    end
+  def register_user() do
+    username = String.to_atom("mmathkar"<>(:erlang.monotonic_time() |> :erlang.phash2(256) |> Integer.to_string(16))<>"@"<>findIP())
+    GenServer.cast(username,{:registerMe, username})    
+    
+  end
+
+  def subscribe_to(username) do
+    GenServer.cast(username,{:registerMe, username}) 
+  end
+
+  def search_by_hashtags(hashtag) do
+    GenServer.cast()
   end
 
 
