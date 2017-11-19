@@ -3,61 +3,19 @@
   defmodule Client do
   use GenServer
 
-  def register_user(username) do
-    # username = String.to_atom("mmathkar"<>(:erlang.monotonic_time() |> :erlang.phash2(256) |> Integer.to_string(16))<>"@"<>findIP())
+  def register_user() do
+    username = String.to_atom("mmathkar"<>(:erlang.monotonic_time() |> :erlang.phash2(256) |> Integer.to_string(16))<>"@"<>findIP())
     GenServer.cast(:main_server,{:registerMe, username})    
     
   end
 
-  def subscribe_to(selfId, username) do
-    GenServer.cast(:main_server,{:subscribeTo, selfId, username}) 
+  def subscribe_to(username) do
+    GenServer.cast(:main_server,{:subscribeTo, username}) 
   end
 
   def search_by_hashtags(hashtag,selfId, username) do
     GenServer.cast(:main_server,{})
   end
-
-  def tweet(username, tweet_content) do
-
-#    {content, hashtags, mentions} = tweetBody
-
-   content=tweet_content
-   split_words=String.split(content," ")
-   hashtags=findHashTags(split_words,[])
-   mentions=findMentions(split_words,[])
-   tweetBody={content, hashtags, mentions}
-
-    GenServer.cast(:main_server,{:tweet,username, tweetBody})
-  end
-
-  def findHashTags([head|tail],hashList) do
-    if(String.first(head)=="#") do
-      findHashTags([tail],Enum.concat(head,hashList))
-
-    else 
-      findHashTags([tail],hashList)
-    end
-
-  end
-
-  def findHashTags([],hashList) do
-    hashList
-  end
-
-  def findMentions([head|tail],mentionList) do
-    if(String.first(head)=="@") do
-      findMentions([tail],Enum.concat(head,mentionList))
-
-    else 
-      findMentions([tail],mentionList)
-    end
-
-  end
-
-  def findMentions([],mentionList) do
-    mentionList
-  end
-
 
   def unsubscribe(hashtag,selfId, username) do
     GenServer.cast(:main_server,{:unsubscribeTo, selfId, username})
