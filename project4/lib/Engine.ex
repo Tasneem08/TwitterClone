@@ -32,6 +32,7 @@ end
             Client.register_user("user" <> Integer.to_string(client))
         end
 
+
   
 
         Client.subscribe_to("user2", "user1")
@@ -40,8 +41,8 @@ end
         Client.subscribe_to("user1", "user5")
 
       for client <- 1..numClients do
-            #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
-            Client.simulateClient("user" <> Integer.to_string(client), numClients)
+            spawn(fn -> Client.simulateClient("user" <> Integer.to_string(client), numClients) end)
+            #Client.simulateClient("user" <> Integer.to_string(client), numClients)
     end
         # Client.tweet("user2", "this is a test tweet.")
 
@@ -142,23 +143,28 @@ end
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
 
-  def handle_call({:myMentions, username}, state) do
+  def handle_call({:myMentions, username}, _from, state) do
       [_, _, tweetsDB, _, mentionsMap] = state
       mentions = Map.get(mentionsMap, username)
       mentionedTweets = getMentions(tweetsDB, MapSet.to_list(mentions), [])
       {:reply, mentionedTweets, state}
   end
 
-  def handle_call({:tweetsWithHashtag, hashtag}, state) do
+  def handle_call({:tweetsWithHashtag, hashtag}, _from, state) do
       [_, _, tweetsDB, hashtagMap, _] = state
       tweets = Map.get(hashtagMap, hashtag)
       hashtagTweets = getHashtags(tweetsDB, MapSet.to_list(tweets), [])
       {:reply, hashtagTweets, state}
   end
 
-  def handle_call({:queryTweets, username}, state) do
+  def handle_call({:queryTweets, username}, _from, state) do
       [_, followsTable, tweetsDB, _, _] = state
-      mapSet = Map.get(followsTable, username) 
+      mapSet = 
+      if Map.get(followsTable, username) == nil do
+        MapSet.new
+      else
+       Map.get(followsTable, username)
+      end 
       relevantTweets = fetchRelevantTweets(Map.to_list(tweetsDB), mapSet, [])
       {:reply, relevantTweets, state}
   end
@@ -167,7 +173,8 @@ end
         {_, {tweeter,content}} = firstTweet
         relevantTweets = 
         if MapSet.member?(mapSet, tweeter) do
-            Enum.concat({tweeter, content}, relevantTweets)
+            List.insert_at(relevantTweets, 0, {tweeter, content})
+            # Enum.concat({tweeter, content}, relevantTweets)
         else
             relevantTweets
         end

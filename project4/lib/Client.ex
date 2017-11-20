@@ -15,26 +15,32 @@
     for i <- 1..2 do
       tweet(username, "test string by " <> username <> "attempt - " <> Integer.to_string(i))
     end
+    
+    Process.sleep(5000)
+     
+    IO.inspect queryTweets(username)
+
   end
 
   def start_link(username) do
       clientname = String.to_atom(username)
-      IO.inspect GenServer.start_link(__MODULE__, username, name: clientname)
+      IO.inspect GenServer.start_link(__MODULE__, [username, MapSet.new], name: clientname)
   end
 
-  def init(username) do
-      {:ok, username}
+  def init(username, seenTweets) do
+      {:ok, {username, seenTweets}}
   end
 
   def handle_cast({:receiveTweet, index, tweeter, content}, state) do
-  username = state
+     [username, seenTweets] = state
+     seenTweets = MapSet.put(seenTweets, index)
       if is_tuple(content) do
         {org_tweeter, text} = content
         IO.inspect " #{username} sees #{tweeter} retweeted #{org_tweeter} ka post : #{text}"
       else
         IO.inspect " #{username} sees #{tweeter} posted a new tweet : #{content}"
       end
-      {:noreply, state}
+      {:noreply, [username, seenTweets]}
   end
 
   def register_user(username) do
