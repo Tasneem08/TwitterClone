@@ -9,14 +9,44 @@ use GenServer
       followersTable = %{}
       followsTable = %{}
       tweetsDB = %{}
-
+      
+      start_Client(total)
       # Start gen server
       start_link(followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap)
-      Simulator.simulate(total)
+      simulate(total)
       
      :timer.sleep(:infinity)
   end
+
+def start_Client(numClients) do
+     for client <- 1..numClients do
+            #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
+            Client.start_link("user" <> Integer.to_string(client))
+            #Client.register_user("user" <> Integer.to_string(client))
+     end
+end
+    def simulate(numClients) do 
+        for client <- 1..numClients do
+            #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
+            #Client.start_link("user" <> Integer.to_string(client))
+            Client.register_user("user" <> Integer.to_string(client))
+        end
+
   
+
+        Client.subscribe_to("user2", "user1")
+        Client.subscribe_to("user4", "user1")
+        Client.subscribe_to("user3", "user1")
+        Client.subscribe_to("user1", "user5")
+
+      for client <- 1..numClients do
+            #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
+            Client.simulateClient("user" <> Integer.to_string(client), numClients)
+    end
+        # Client.tweet("user2", "this is a test tweet.")
+
+    end
+
   def start_link(followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap) do
       GenServer.start_link(Engine, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap], name: :main_server)
   end
@@ -58,7 +88,6 @@ use GenServer
       end 
       mapSet2 = MapSet.put(mapSet2, username)
       followsTable = Map.put(followsTable, selfId, mapSet2)
-
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
 
@@ -78,7 +107,7 @@ use GenServer
       [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
       {content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
-      IO.puts "AT SERVER #{username} posted a new tweet : #{content}"
+    #   IO.puts "AT SERVER #{username} posted a new tweet : #{content}"
       index = Kernel.map_size(tweetsDB)
       tweetsDB = Map.put(tweetsDB, index, {username, content})
       mentionsMap = updateMentionsMap(mentionsMap, mentions, index)

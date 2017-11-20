@@ -3,6 +3,11 @@ defmodule Simulator do
     def simulate(numClients) do 
         for client <- 1..numClients do
             #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
+            Client.register_user("user" <> Integer.to_string(client))
+        end
+
+        for client <- 1..numClients do
+            #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
             Client.simulateClient("user" <> Integer.to_string(client), numClients)
         end
 
