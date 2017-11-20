@@ -8,7 +8,7 @@ use GenServer
       mentionsMap = %{}
       followersTable = %{}
       followsTable = %{}
-      tweetsDB = {}
+      tweetsDB = %{}
 
       # Start gen server
       start_link(followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap)
@@ -40,13 +40,24 @@ use GenServer
 
   def handle_cast({:subscribeTo, selfId, username}, state) do
       [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
-      mapSet = Map.get(followersTable, username) 
+      mapSet = 
+      if Map.get(followersTable, username) == nil do
+        MapSet.new
+      else
+       Map.get(followersTable, username)
+      end 
+
       mapSet = MapSet.put(mapSet, selfId)
       followersTable = Map.put(followersTable, username, mapSet)
 
-      mapSet = Map.get(followsTable, selfId) 
-      mapSet = MapSet.put(mapSet, username)
-      followsTable = Map.put(followsTable, selfId, mapSet)
+      mapSet2 = 
+      if Map.get(followsTable, selfId) == nil do
+        MapSet.new
+      else
+       Map.get(followsTable, selfId)
+      end 
+      mapSet2 = MapSet.put(mapSet2, username)
+      followsTable = Map.put(followsTable, selfId, mapSet2)
 
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
@@ -67,7 +78,7 @@ use GenServer
       [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
       {content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
-
+      IO.puts "AT SERVER #{username} posted a new tweet : #{content}"
       index = Kernel.map_size(tweetsDB)
       tweetsDB = Map.put(tweetsDB, index, {username, content})
       mentionsMap = updateMentionsMap(mentionsMap, mentions, index)

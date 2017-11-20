@@ -3,6 +3,20 @@
   defmodule Client do
   use GenServer
 
+  def simulateClient(username, numClients) do
+    # register_user
+    # subscribe to random users
+    # send n tweets to main_server
+    pid = register_user(username)
+    for _ <- 1..3 do
+    subscribe_to(username, "user" <> Integer.to_string(Enum.random(1..30)))
+    end
+
+    for i <- 1..2 do
+      tweet(username, "test string by " <> username <> "attempt - " <> Integer.to_string(i))
+    end
+  end
+
   def start_link(username) do
       GenServer.start_link(Client, name: String.to_atom(username))
   end
@@ -12,20 +26,21 @@
   end
 
   def handle_cast({:receiveTweet, index, tweeter, content}, state) do
+  IO.inspect "in handle cast" 
       if is_tuple(content) do
         {org_tweeter, text} = content
-        IO.puts "#{tweeter} retweeted #{org_tweeter} ka post : #{text}"
+        IO.inspect "#{tweeter} retweeted #{org_tweeter} ka post : #{text}"
       else
-        IO.puts "#{tweeter} posted a new tweet : #{content}"
+        IO.inspect "#{tweeter} posted a new tweet : #{content}"
       end
       {:noreply, state}
   end
 
   def register_user(username) do
-    start_link(username)
+    {_, pid} = start_link(username)
     #username = String.to_atom("mmathkar"<>(:erlang.monotonic_time() |> :erlang.phash2(256) |> Integer.to_string(16))<>"@"<>findIP())
     GenServer.cast(:main_server,{:registerMe, username})    
-    
+    pid
   end
 
   def retweet(selfId, tweetIndex) do
