@@ -12,8 +12,8 @@
     # subscribe_to(username, "user" <> Integer.to_string(Enum.random(1..30)))
     # end
 
-    for i <- 1..2 do
-      tweet(username, "test string by " <> username <> "attempt - " <> Integer.to_string(i))
+    for i <- 1..5 do
+      tweet(username, "test string by " <> username <> " attempt - " <> Integer.to_string(i) <> " @user"<> Integer.to_string(i))
     end
     
     Process.sleep(5000)
@@ -68,8 +68,8 @@
   end
 
   def queryTweets(username) do
-    tweets_list=GenServer.call(:main_server,{:queryTweets, username})
-    tweets_list
+    {relevantTweets, mentionedTweets}=GenServer.call(:main_server,{:queryTweets, username})
+    {relevantTweets, mentionedTweets}
   end
 
   def tweet(username, tweet_content) do
@@ -87,7 +87,8 @@
 
   def findHashTags([head|tail],hashList) do
     if(String.first(head)=="#") do
-      findHashTags(tail,Enum.concat(head,hashList))
+      [_, elem] = String.split(head, "#") 
+      findHashTags(tail,List.insert_at(hashList, 0, elem))
 
     else 
       findHashTags(tail,hashList)
@@ -101,8 +102,9 @@
 
   def findMentions([head|tail],mentionList) do
     if(String.first(head)=="@") do
-      findMentions(tail,Enum.concat(head,mentionList))
-
+      [_, elem] = String.split(head, "@") 
+      findMentions(tail,List.insert_at(mentionList, 0, elem))
+      
     else 
       findMentions(tail,mentionList)
     end

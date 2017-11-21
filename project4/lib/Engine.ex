@@ -158,7 +158,7 @@ end
   end
 
   def handle_call({:queryTweets, username}, _from, state) do
-      [_, followsTable, tweetsDB, _, _] = state
+      [_, followsTable, tweetsDB, _, mentionsMap] = state
       mapSet = 
       if Map.get(followsTable, username) == nil do
         MapSet.new
@@ -166,14 +166,22 @@ end
        Map.get(followsTable, username)
       end 
       relevantTweets = fetchRelevantTweets(Map.to_list(tweetsDB), mapSet, [])
-      {:reply, relevantTweets, state}
+      mentions = 
+      if Map.get(mentionsMap, username) == nil do
+        MapSet.new
+      else 
+        Map.get(mentionsMap, username)
+      end
+      mentionedTweets = getMentions(tweetsDB, MapSet.to_list(mentions), [])
+
+      {:reply, {relevantTweets, mentionedTweets}, state}
   end
   
   def fetchRelevantTweets([firstTweet |tweetsDB], mapSet, relevantTweets) do
         {_, {tweeter,content}} = firstTweet
         relevantTweets = 
         if MapSet.member?(mapSet, tweeter) do
-            List.insert_at(relevantTweets, 0, {tweeter, content})
+            List.insert_at(relevantTweets, 0, firstTweet)
             # Enum.concat({tweeter, content}, relevantTweets)
         else
             relevantTweets
@@ -194,7 +202,7 @@ end
   end
 
   def getHashtags(tweetsDB, [index | rest], hashtagTweets) do
-      hashtagTweets = Enum.concat({index, Map.get(tweetsDB, index)}, hashtagTweets)
+      hashtagTweets = List.insert_at(hashtagTweets, 0, {index, Map.get(tweetsDB, index)})
       getHashtags(tweetsDB, rest, hashtagTweets)
   end
 
@@ -203,7 +211,7 @@ end
   end
 
   def getMentions(tweetsDB, [index | rest], mentionedTweets) do
-      mentionedTweets = Enum.concat({index, Map.get(tweetsDB, index)}, mentionedTweets)
+      mentionedTweets = List.insert_at(mentionedTweets, 0, {index, Map.get(tweetsDB, index)})
       getMentions(tweetsDB, rest, mentionedTweets)
   end
 
