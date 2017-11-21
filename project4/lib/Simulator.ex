@@ -1,22 +1,35 @@
 defmodule Simulator do
 
-    def simulate(numClients) do 
+def main(args) do
+    total = List.first(args) |> String.to_integer()
+    # spawn(fn -> Engine.start_link() end)
+    Engine.start_link()
+
+    start_Client(total)
+    simulate(total)
+    :timer.sleep(:infinity)
+end
+        def simulate(numClients) do 
         for client <- 1..numClients do
             #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
+            #Client.start_link("user" <> Integer.to_string(client))
             Client.register_user("user" <> Integer.to_string(client))
         end
 
-        for client <- 1..numClients do
-            #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
-            Client.simulateClient("user" <> Integer.to_string(client), numClients)
-        end
+        Client.subscribe_to("user2", "user1")
+        Client.subscribe_to("user4", "user1")
+        Client.subscribe_to("user3", "user1")
+        Client.subscribe_to("user1", "user5")
 
-        # Client.subscribe_to("user1", "user2")
-        # Client.subscribe_to("user1", "user3")
-        # Client.subscribe_to("user1", "user4")
-        # Client.subscribe_to("user5", "user1")
-
-        # Client.tweet("user2", "this is a test tweet.")
-
+      for client <- 1..numClients do
+            spawn(fn -> Client.simulateClient("user" <> Integer.to_string(client), numClients) end)
+      end
     end
+
+    def start_Client(numClients) do
+     for client <- 1..numClients do
+            Client.start_link("user" <> Integer.to_string(client))
+     end
+    end
+
 end

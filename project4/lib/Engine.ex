@@ -1,55 +1,13 @@
 defmodule Engine do
 use GenServer
-# entry point to the code. Read command line arguments and invoke the right things here.
-  # Entry point to the code. 
-  def main(args) do
-      total = List.first(args) |> String.to_integer()
+
+  def start_link() do
       hashtagMap = %{}
       mentionsMap = %{}
       followersTable = %{}
       followsTable = %{}
       tweetsDB = %{}
-      
-      start_Client(total)
-      # Start gen server
-      start_link(followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap)
-      simulate(total)
-      
-     :timer.sleep(:infinity)
-  end
-
-def start_Client(numClients) do
-     for client <- 1..numClients do
-            #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
-            Client.start_link("user" <> Integer.to_string(client))
-            #Client.register_user("user" <> Integer.to_string(client))
-     end
-end
-    def simulate(numClients) do 
-        for client <- 1..numClients do
-            #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
-            #Client.start_link("user" <> Integer.to_string(client))
-            Client.register_user("user" <> Integer.to_string(client))
-        end
-
-
-  
-
-        Client.subscribe_to("user2", "user1")
-        Client.subscribe_to("user4", "user1")
-        Client.subscribe_to("user3", "user1")
-        Client.subscribe_to("user1", "user5")
-
-      for client <- 1..numClients do
-            spawn(fn -> Client.simulateClient("user" <> Integer.to_string(client), numClients) end)
-            #Client.simulateClient("user" <> Integer.to_string(client), numClients)
-    end
-        # Client.tweet("user2", "this is a test tweet.")
-
-    end
-
-  def start_link(followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap) do
-      GenServer.start_link(Engine, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap], name: :main_server)
+      GenServer.start_link(__MODULE__, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap], name: :main_server)
   end
 
   def init(followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap) do

@@ -8,7 +8,7 @@ defmodule Project4.Mixfile do
       elixir: "~> 1.5",
       start_permanent: Mix.env == :prod,
       deps: deps(),
-      escript: [main_module: Engine]
+      escript: [main_module: Simulator]
     ]
   end
 
