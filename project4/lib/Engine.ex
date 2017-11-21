@@ -145,14 +145,24 @@ end
 
   def handle_call({:myMentions, username}, _from, state) do
       [_, _, tweetsDB, _, mentionsMap] = state
-      mentions = Map.get(mentionsMap, username)
+      mentions = 
+      if Map.get(mentionsMap, username) == nil do
+        MapSet.new
+      else 
+        Map.get(mentionsMap, username)
+      end
       mentionedTweets = getMentions(tweetsDB, MapSet.to_list(mentions), [])
       {:reply, mentionedTweets, state}
   end
 
   def handle_call({:tweetsWithHashtag, hashtag}, _from, state) do
       [_, _, tweetsDB, hashtagMap, _] = state
-      tweets = Map.get(hashtagMap, hashtag)
+      tweets = 
+      if Map.get(hashtagMap, hashtag) == nil do
+        MapSet.new
+      else 
+        Map.get(hashtagMap, hashtag)
+      end
       hashtagTweets = getHashtags(tweetsDB, MapSet.to_list(tweets), [])
       {:reply, hashtagTweets, state}
   end
@@ -182,7 +192,6 @@ end
         relevantTweets = 
         if MapSet.member?(mapSet, tweeter) do
             List.insert_at(relevantTweets, 0, firstTweet)
-            # Enum.concat({tweeter, content}, relevantTweets)
         else
             relevantTweets
         end

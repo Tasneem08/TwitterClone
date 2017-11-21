@@ -14,12 +14,19 @@
 
     for i <- 1..5 do
       tweet(username, "test string by " <> username <> " attempt - " <> Integer.to_string(i) <> " @user"<> Integer.to_string(i))
+      if(i == 4) do
+      tweet(username, "test string by " <> username <> " attempt - " <> Integer.to_string(i) <> " #gatorGood")
+      end
     end
     
     Process.sleep(5000)
      
     IO.inspect queryTweets(username)
 
+    Process.sleep(5000)
+    if username == "user2" do
+    IO.inspect search_by_hashtags("gatorod")
+    end
   end
 
   def start_link(username) do
