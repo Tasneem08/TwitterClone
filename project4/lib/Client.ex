@@ -3,30 +3,21 @@
   defmodule Client do
   use GenServer
 
-  def simulateClient(username, numClients) do
-    # register_user
-    # subscribe to random users
-    # send n tweets to main_server
-    # pid = register_user(username)
-    # for _ <- 1..3 do
-    # subscribe_to(username, "user" <> Integer.to_string(Enum.random(1..30)))
-    # end
+  def generateTweets(username, delay) do
 
-    for i <- 1..5 do
-      tweet(username, "test string by " <> username <> " attempt - " <> Integer.to_string(i) <> " @user"<> Integer.to_string(i))
-      if(i == 4) do
-      tweet(username, "test string by " <> username <> " attempt - " <> Integer.to_string(i) <> " #gatorGood")
-      end
-    end
+    # get the tweet content.
+    content = Simulator.getTweetContent(username)
+    GenServer.cast(String.to_atom(username),{:tweet, content})
     
-    Process.sleep(5000)
-     
-    IO.inspect queryTweets(username)
+    Process.sleep(delay)
 
-    Process.sleep(5000)
-    if username == "user2" do
-    IO.inspect search_by_hashtags("gatorod")
-    end
+    generateTweets(username, delay)
+    # IO.inspect queryTweets(username)
+
+    # Process.sleep(5000)
+    # if username == "user2" do
+    # IO.inspect search_by_hashtags("gatorod")
+    # end
   end
 
   def start_link(username) do

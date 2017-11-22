@@ -2,34 +2,93 @@ defmodule Simulator do
 
 def main(args) do
     total = List.first(args) |> String.to_integer()
-    # spawn(fn -> Engine.start_link() end)
+    # Start the engine
     Engine.start_link()
+    
+    setupStaticData(total)
+    # Start the clients
+    start_Client()
 
-    start_Client(total)
-    simulate(total)
+    # Start the simulation
+    simulate()
+
     :timer.sleep(:infinity)
 end
-        def simulate(numClients) do 
-        for client <- 1..numClients do
-            #spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
-            #Client.start_link("user" <> Integer.to_string(client))
-            Client.register_user("user" <> Integer.to_string(client))
-        end
 
+def setupStaticData(total) do
+    :ets.new(:staticFields, [:named_table])
+    :ets.insert(:staticFields, {"totalNodes", total})
+    :ets.insert(:staticFields, {"sampleTweets", ["Please come to my party. ","Don't you dare come to my party. ","Why won't you invite me to your party? ","But I wanna come to your party. ","Okay I won't come to your party. "]})
+    :ets.insert(:staticFields, {"hashTags", ["#adoptdontshop ","#UFisGreat ","#Fall2017 ","#DinnerParty ","#cutenesscatified "]})
+
+end
+ 
+def start_Client() do
+    [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
+     for client <- 1..numClients do
+            Client.start_link("user" <> Integer.to_string(client))
+            Client.register_user("user" <> Integer.to_string(client))
+     end
+end
+
+def simulate() do 
+        [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
+        assignfollowers(numClients) # add zipf logic
+        delay = calculateFrequency(numClients) # add zipf logic
+
+      for client <- 1..numClients do
+            spawn(fn -> Client.generateTweets("user" <> Integer.to_string(client), delay * client) end)
+      end
+end
+
+def assignfollowers(numClients) do
         Client.subscribe_to("user2", "user1")
         Client.subscribe_to("user4", "user1")
         Client.subscribe_to("user3", "user1")
         Client.subscribe_to("user1", "user5")
+end
 
-      for client <- 1..numClients do
-            spawn(fn -> Client.simulateClient("user" <> Integer.to_string(client), numClients) end)
-      end
+def calculateFrequency(numClients) do
+    3000
+end
+
+def getTweetContent(username) do
+    [{_, sampleTweets}] = :ets.lookup(:staticFields, "sampleTweets")
+    rand_Index = Enum.random(1..Enum.count(sampleTweets))
+    selectedTweet = Enum.at(sampleTweets, rand_Index - 1)
+    
+    [{_, hashTags}] = :ets.lookup(:staticFields, "hashTags")
+    numTags = Enum.random(0..5)
+
+    hashTagList = 
+    if numTags > 0 do
+        for i <- Enum.to_list(1..numTags) do
+             Enum.at(hashTags, i - 1)
+        end
+    else
+        []
+    end
+    [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
+    numMentions = Enum.random(0..5)
+
+    mentionsList = 
+    if numMentions > 0 do
+        for i <- Enum.to_list(1..numMentions) do
+             "@user" <> Integer.to_string(Enum.random(1..numClients)) <> " "
+        end
+    else
+        []
+    end
+    selectedTweet <> condense(hashTagList, "") <> condense(mentionsList, "")
+
     end
 
-    def start_Client(numClients) do
-     for client <- 1..numClients do
-            Client.start_link("user" <> Integer.to_string(client))
-     end
+    def condense([first|tail], string) do
+        string = string <> first
+        condense(tail, string)
     end
 
+    def condense([], string) do
+        string
+    end
 end

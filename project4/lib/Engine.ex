@@ -74,6 +74,7 @@ use GenServer
       
       #broadcast 
       sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, content)
+      sendToFollowers(mentions, index, username, content)
 
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
@@ -97,7 +98,7 @@ use GenServer
       
       #broadcast 
       sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, {original_tweeter, content})
-
+      
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
 
