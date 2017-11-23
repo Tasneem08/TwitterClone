@@ -8,9 +8,9 @@ def main(args) do
     setupStaticData(total)
     # Start the clients
     start_Client()
-# assignfollowers(total)
+    assignfollowers(total)
     # Start the simulation
-     simulate()
+    simulate()
 
     :timer.sleep(:infinity)
 end
@@ -41,9 +41,24 @@ def simulate() do
       end
 end
 
+def getSum([first|tail], sum) do
+    sum = sum + first
+    getSum(tail,sum)
+end
+
+def getSum([], sum) do
+    sum
+end
+
 def assignfollowers(numClients) do
     # calculate cons somehow 
-    c = 5
+    
+    harmonicList = for j <- 1..numClients do
+                     1/j
+                   end
+    c=(100/getSum(harmonicList,0))
+
+    
     for tweeter <- 1..numClients, i <- 1..round(Float.floor(c/tweeter)) do
             # IO.inspect "#{tweeter} #{i}"
             follower = ("user" <> Integer.to_string(Enum.random(1..numClients)))
