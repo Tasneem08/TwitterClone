@@ -8,7 +8,6 @@ def main(args) do
     setupStaticData(total)
     # Start the clients
     start_Client()
-    assignfollowers(total)
     # Start the simulation
     simulate()
 
