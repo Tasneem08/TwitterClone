@@ -25,8 +25,8 @@ end
 def start_Client() do
     [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
      for client <- 1..numClients do
-            Client.start_link("user" <> Integer.to_string(client))
-            Client.register_user("user" <> Integer.to_string(client))
+            spawn(fn -> Client.start_link("user" <> Integer.to_string(client)) end)
+            spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
      end
 end
 
@@ -37,6 +37,8 @@ def simulate() do
 
       for client <- 1..numClients do
             spawn(fn -> Client.generateTweets("user" <> Integer.to_string(client), delay * client) end)
+            
+            spawn(fn -> Client.createRetweets("user" <> Integer.to_string(client)) end)
       end
 end
 
@@ -59,12 +61,11 @@ def assignfollowers(numClients) do
 
     
     for tweeter <- 1..numClients, i <- 1..round(Float.floor(c/tweeter)) do
-            # IO.inspect "#{tweeter} #{i}"
             follower = ("user" <> Integer.to_string(Enum.random(1..numClients)))
             mainUser = ("user" <> Integer.to_string(tweeter))
-             spawn(fn -> Client.subscribe_to(follower, mainUser) end)
+            spawn(fn -> Client.subscribe_to(follower, mainUser) end)
     end
-    GenServer.cast(:main_server,{:printMapping})
+    # GenServer.cast(:main_server,{:printMapping})
 end
 
 def calculateFrequency(numClients) do

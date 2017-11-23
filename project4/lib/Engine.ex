@@ -18,10 +18,10 @@ use GenServer
       [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
       followersTable = 
       if Map.has_key?(followersTable, username) do
-        IO.puts "#{username} is an existing user."
+        # IO.puts "#{username} is an existing user."
         followersTable
       else
-        IO.puts "#{username} is an NEW user... Updating the tables now.."
+        # IO.puts "#{username} is an NEW user... Updating the tables now.."
         Map.put(followersTable, username, MapSet.new)
       end
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
@@ -29,8 +29,8 @@ use GenServer
 
 def handle_cast({:printMapping}, state) do
     [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
-    IO.inspect "PRINTING MAPPING"
-    IO.inspect followersTable
+    # IO.inspect "PRINTING MAPPING"
+    # IO.inspect followersTable
     {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
 end
 
@@ -102,7 +102,7 @@ end
       tweetsDB = Map.put(tweetsDB, index, {username, {original_tweeter, content}})
       #mentionsMap = updateMentionsMap(mentionsMap, mentions, index)
       #hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
-      
+    #   IO.inspect tweetsDB
       #broadcast 
       sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, {original_tweeter, content})
       

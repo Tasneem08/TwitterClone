@@ -12,17 +12,23 @@
     Process.sleep(delay)
 
     generateTweets(username, delay)
-    # IO.inspect queryTweets(username)
+  end
 
-    # Process.sleep(5000)
-    # if username == "user2" do
-    # IO.inspect search_by_hashtags("gatorod")
-    # end
+  def createRetweets(username) do
+
+    Process.sleep(5000)
+
+    index = GenServer.call(String.to_atom(username), {:getRetweetIndex})
+    if index != nil do
+      GenServer.cast(String.to_atom(username),{:retweet, username, index})
+    end
+    createRetweets(username)
+
   end
 
   def start_link(username) do
       clientname = String.to_atom(username)
-      IO.inspect GenServer.start_link(__MODULE__, [username, MapSet.new,[],[],[],[]],name: clientname)
+      GenServer.start_link(__MODULE__, [username, MapSet.new,[],[],[],[]],name: clientname)
   end
 
   def init(username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets) do
@@ -48,8 +54,6 @@
   end
 
   def register_user(username) do
-    # {_, pid} = start_link(username)
-    #username = String.to_atom("mmathkar"<>(:erlang.monotonic_time() |> :erlang.phash2(256) |> Integer.to_string(16))<>"@"<>findIP())
     GenServer.cast(:main_server,{:registerMe, username})
   end
 
@@ -57,6 +61,16 @@
      [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
      GenServer.cast(:main_server,{:reTweet, selfId, tweetIndex}) 
      {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
+  end
+  
+
+  def handle_call({:getRetweetIndex}, _from, state) do
+     [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
+     tweetList = MapSet.to_list(seenTweets)
+     rand_Index = Enum.random(1..Enum.count(tweetList))
+     selectedTweet = Enum.at(tweetList, rand_Index - 1)
+
+     {:reply, selectedTweet, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
 
   def retweet(selfId, tweetIndex) do
@@ -166,26 +180,5 @@
   def unsubscribe(selfId, username) do
     GenServer.cast(:main_server,{:unsubscribeTo, selfId, username})
   end
-
-  
-
-   # Returns the IP address of the machine the code is being run on.
-  # def findIP do
-  #   {ops_sys, extra } = :os.type
-  #   ip = 
-  #   case ops_sys do
-  #     :unix -> 
-  #           if extra == :linux do
-  #             {:ok, [addr: ip]} = :inet.ifget('ens3', [:addr])
-  #             to_string(:inet.ntoa(ip))
-  #           else
-  #             {:ok, [addr: ip]} = :inet.ifget('en0', [:addr])
-  #             to_string(:inet.ntoa(ip))
-  #           end
-  #     :win32 -> {:ok, [ip, _]} = :inet.getiflist
-  #              to_string(ip)
-  #   end
-  # (ip)
-  # end
 
   end
