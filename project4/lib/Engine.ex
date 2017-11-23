@@ -27,6 +27,13 @@ use GenServer
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
 
+def handle_cast({:printMapping}, state) do
+    [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
+    IO.inspect "PRINTING MAPPING"
+    IO.inspect followersTable
+    {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
+end
+
   def handle_cast({:subscribeTo, selfId, username}, state) do
       [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
       mapSet = 

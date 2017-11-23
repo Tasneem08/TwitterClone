@@ -8,9 +8,9 @@ def main(args) do
     setupStaticData(total)
     # Start the clients
     start_Client()
-
+# assignfollowers(total)
     # Start the simulation
-    simulate()
+     simulate()
 
     :timer.sleep(:infinity)
 end
@@ -42,10 +42,15 @@ def simulate() do
 end
 
 def assignfollowers(numClients) do
-        Client.subscribe_to("user2", "user1")
-        Client.subscribe_to("user4", "user1")
-        Client.subscribe_to("user3", "user1")
-        Client.subscribe_to("user1", "user5")
+    # calculate cons somehow 
+    c = 5
+    for tweeter <- 1..numClients, i <- 1..round(Float.floor(c/tweeter)) do
+            # IO.inspect "#{tweeter} #{i}"
+            follower = ("user" <> Integer.to_string(Enum.random(1..numClients)))
+            mainUser = ("user" <> Integer.to_string(tweeter))
+             spawn(fn -> Client.subscribe_to(follower, mainUser) end)
+    end
+    GenServer.cast(:main_server,{:printMapping})
 end
 
 def calculateFrequency(numClients) do
