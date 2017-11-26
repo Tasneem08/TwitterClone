@@ -19,6 +19,7 @@ use GenServer
       followersTable = 
       if Map.has_key?(followersTable, username) do
         # IO.puts "#{username} is an existing user."
+        spawn(fn -> GenServer.cast(String.to_atom(username),{:queryYourTweets}) end)
         followersTable
       else
         # IO.puts "#{username} is an NEW user... Updating the tables now.."

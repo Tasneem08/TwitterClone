@@ -35,15 +35,20 @@
       {:ok, {username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets}}
   end
 
+
+  def handle_cast({:kill_self}, state) do
+      {:stop, :normal, state}
+  end
+
   def handle_cast({:receiveTweet, index, tweeter, content}, state) do
      [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
      seenTweets = MapSet.put(seenTweets, index)
-      if is_tuple(content) do
-        {org_tweeter, text} = content
-        IO.inspect " #{username} sees #{tweeter} retweeted #{org_tweeter} ka post : #{text}"
-      else
-        IO.inspect " #{username} sees #{tweeter} posted a new tweet : #{content}"
-      end
+      # if is_tuple(content) do
+      #   {org_tweeter, text} = content
+      #   IO.inspect " #{username} sees #{tweeter} retweeted #{org_tweeter} ka post : #{text}"
+      # else
+      #   IO.inspect " #{username} sees #{tweeter} posted a new tweet : #{content}"
+      # end
       {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
 
@@ -91,7 +96,6 @@
   def handle_cast({:search_by_hashtags, hashtag}, state) do
      [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
      hashtag_list = GenServer.call(:main_server,{:tweetsWithHashtag, hashtag})
-     hashtag_list
      {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
 
@@ -100,10 +104,9 @@
     hashtag_list
   end
 
-  def handle_cast({:getMyMentions, username}, state) do
+  def handle_cast({:getMyMentions}, state) do
      [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
      mentions_list=GenServer.call(:main_server,{:myMentions, username})    
-     mentions_list
      {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
 
@@ -112,9 +115,9 @@
     mentions_list
   end
 
-  def handle_cast({:queryTweets, username}, state) do
+  def handle_cast({:queryYourTweets}, state) do
      [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
-     {relevantTweets, mentionedTweets}=GenServer.call(:main_server,{:queryTweets, username})
+     IO.inspect {relevantTweets, mentionedTweets}=GenServer.call(:main_server,{:queryTweets, username})
      {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]} #not keeping mentioned tweets
   end
 

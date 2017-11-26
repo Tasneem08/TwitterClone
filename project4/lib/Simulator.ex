@@ -8,9 +8,14 @@ def main(args) do
     setupStaticData(total)
     # Start the clients
     start_Client()
+    
     # Start the simulation
     simulate()
-
+    spawn(fn-> getMyMentions() end)
+    Process.sleep(5000)
+    spawn(fn-> searchByHashtag() end)
+    Process.sleep(5000)
+    spawn(fn-> killClients() end)
     :timer.sleep(:infinity)
 end
 
@@ -28,6 +33,31 @@ def start_Client() do
             spawn(fn -> Client.start_link("user" <> Integer.to_string(client)) end)
             spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
      end
+end
+
+def killClients() do
+    [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
+    
+    # select 5 random to kill and store these ids in a list
+    clientIds = for i<- 1..5 do
+        client = Enum.random(1..numClients)
+    end
+     IO.inspect clientIds
+
+    for j <- clientIds do
+        spawn(fn -> GenServer.cast(String.to_atom("user"<>Integer.to_string(j)),{:kill_self}) end)
+    end
+
+    # sleep for some time
+    Process.sleep(10000)
+    # start the genserver again and get their state back from server - query the tweets etc
+
+    IO.inspect "STARTING AGAIN!!!!!"
+    for j <- clientIds do
+        spawn(fn -> Client.start_link("user" <> Integer.to_string(j)) end)
+        spawn(fn -> Client.register_user("user" <> Integer.to_string(j)) end)
+    end
+
 end
 
 def simulate() do 
