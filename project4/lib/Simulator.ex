@@ -11,6 +11,7 @@ def main(args) do
     
     # Start the simulation
     simulate()
+    Process.sleep(15000)
     spawn(fn-> getMyMentions() end)
     Process.sleep(5000)
     spawn(fn-> searchByHashtag() end)
@@ -33,6 +34,33 @@ def start_Client() do
             spawn(fn -> Client.start_link("user" <> Integer.to_string(client)) end)
             spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
      end
+end
+
+def getMyMentions() do
+    [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
+    IO.inspect "GETTING MY MENTIONS"
+
+    # select 5 random to kill and store these ids in a list
+    clientIds = for i<- 1..5 do
+        client = Enum.random(1..numClients)
+    end
+
+    for j <- clientIds do
+        spawn(fn -> GenServer.cast(String.to_atom("user"<>Integer.to_string(j)),{:getMyMentions}) end)
+    end
+end
+
+def searchByHashtag() do
+    [{_, hashTags}] = :ets.lookup(:staticFields, "hashTags")
+    IO.inspect "SEARCHING BY HASHTAG"
+    
+    # select 5 random to kill and store these ids in a list
+    for i<- 1..5 do
+        hashTag = Enum.random(hashTags)
+        IO.inspect hashTag
+        spawn(fn -> GenServer.cast(String.to_atom("user"<>Integer.to_string(i)),{:search_by_hashtags, String.trim(hashTag)}) end)
+    end
+
 end
 
 def killClients() do

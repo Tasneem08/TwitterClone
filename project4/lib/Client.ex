@@ -43,12 +43,12 @@
   def handle_cast({:receiveTweet, index, tweeter, content}, state) do
      [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
      seenTweets = MapSet.put(seenTweets, index)
-      # if is_tuple(content) do
-      #   {org_tweeter, text} = content
-      #   IO.inspect " #{username} sees #{tweeter} retweeted #{org_tweeter} ka post : #{text}"
-      # else
-      #   IO.inspect " #{username} sees #{tweeter} posted a new tweet : #{content}"
-      # end
+      if is_tuple(content) do
+        {org_tweeter, text} = content
+        IO.inspect " #{username} sees #{tweeter} retweeted #{org_tweeter} ka post : #{text}"
+      else
+        IO.inspect " #{username} sees #{tweeter} posted a new tweet : #{content}"
+      end
       {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
 
@@ -95,35 +95,20 @@
 #change
   def handle_cast({:search_by_hashtags, hashtag}, state) do
      [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
-     hashtag_list = GenServer.call(:main_server,{:tweetsWithHashtag, hashtag})
+      IO.inspect hashtag_list = GenServer.call(:main_server,{:tweetsWithHashtag, hashtag})
      {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
-  end
-
-  def search_by_hashtags(hashtag) do
-    hashtag_list = GenServer.call(:main_server,{:tweetsWithHashtag, hashtag})
-    hashtag_list
   end
 
   def handle_cast({:getMyMentions}, state) do
      [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
-     mentions_list=GenServer.call(:main_server,{:myMentions, username})    
+     IO.inspect mentions_list=GenServer.call(:main_server,{:myMentions, username})    
      {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
-  end
-
-  def getMyMentions(username) do
-    mentions_list=GenServer.call(:main_server,{:myMentions, username})    
-    mentions_list
   end
 
   def handle_cast({:queryYourTweets}, state) do
      [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
      IO.inspect {relevantTweets, mentionedTweets}=GenServer.call(:main_server,{:queryTweets, username})
      {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]} #not keeping mentioned tweets
-  end
-
-  def queryTweets(username) do
-    {relevantTweets, mentionedTweets}=GenServer.call(:main_server,{:queryTweets, username})
-    {relevantTweets, mentionedTweets}
   end
 
   def handle_cast({:tweet, tweet_content}, state) do
@@ -139,21 +124,11 @@
 
       {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
-
-  def tweet(username, tweet_content) do
-    #{content, hashtags, mentions} = tweetBody
-    content=tweet_content
-    split_words=String.split(content," ")
-    hashtags=findHashTags(split_words,[])
-    mentions=findMentions(split_words,[])
-    tweetBody={content, hashtags, mentions}
-    GenServer.cast(:main_server,{:tweet,username, tweetBody})
-  end
   
   def findHashTags([head|tail],hashList) do
     if(String.first(head)=="#") do
-      [_, elem] = String.split(head, "#") 
-      findHashTags(tail,List.insert_at(hashList, 0, elem))
+      # [_, elem] = String.split(head, "#") 
+      findHashTags(tail,List.insert_at(hashList, 0, head))
     else 
       findHashTags(tail,hashList)
     end

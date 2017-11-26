@@ -81,8 +81,8 @@ end
       hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
       
       #broadcast 
-      sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, content)
-      sendToFollowers(mentions, index, username, content)
+      spawn(fn->sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, content)end)
+      spawn(fn->sendToFollowers(mentions, index, username, content)end)
 
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
@@ -105,7 +105,7 @@ end
       #hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
     #   IO.inspect tweetsDB
       #broadcast 
-      sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, {original_tweeter, content})
+      spawn(fn -> sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, {original_tweeter, content})end)
       
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
   end
