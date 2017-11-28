@@ -125,7 +125,7 @@ end
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
   end
 
-  def handle_call({:myMentions, username}, _from, state) do
+  def handle_cast({:myMentions, username}, state) do
       [_, _, tweetsDB, _, mentionsMap, userToIPMap] = state
       mentions = 
       if Map.get(mentionsMap, username) == nil do
@@ -134,10 +134,11 @@ end
         Map.get(mentionsMap, username)
       end
       mentionedTweets = getMentions(tweetsDB, MapSet.to_list(mentions), [])
-      {:reply, mentionedTweets, state}
+      spawn(fn -> GenServer.cast({String.to_atom(username), Map.get(userToIPMap, username)},{:receiveMyMentions, mentionedTweets}) end)
+      {:noreply, state}
   end
 
-  def handle_call({:tweetsWithHashtag, hashtag}, _from, state) do
+  def handle_cast({:tweetsWithHashtag, hashtag, username}, state) do
       [_, _, tweetsDB, hashtagMap, _, userToIPMap] = state
       tweets = 
       if Map.get(hashtagMap, hashtag) == nil do
@@ -146,10 +147,11 @@ end
         Map.get(hashtagMap, hashtag)
       end
       hashtagTweets = getHashtags(tweetsDB, MapSet.to_list(tweets), [])
-      {:reply, hashtagTweets, state}
+      spawn(fn -> GenServer.cast({String.to_atom(username), Map.get(userToIPMap, username)},{:receiveHashtagResults, hashtagTweets}) end)
+      {:noreply, state}
   end
 
-  def handle_call({:queryTweets, username}, _from, state) do
+  def handle_cast({:queryTweets, username}, state) do
       [_, followsTable, tweetsDB, _, mentionsMap, userToIPMap] = state
       mapSet = 
       if Map.get(followsTable, username) == nil do
@@ -165,8 +167,8 @@ end
         Map.get(mentionsMap, username)
       end
       mentionedTweets = getMentions(tweetsDB, MapSet.to_list(mentions), [])
-
-      {:reply, {relevantTweets, mentionedTweets}, state}
+      spawn(fn -> GenServer.cast({String.to_atom(username), Map.get(userToIPMap, username)},{:receiveQueryResults, relevantTweets, mentionedTweets}) end)
+      {:noreply, state}
   end
   
   def fetchRelevantTweets([firstTweet |tweetsDB], mapSet, relevantTweets) do
