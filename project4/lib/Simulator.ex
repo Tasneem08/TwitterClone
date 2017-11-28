@@ -131,11 +131,17 @@ def simulate(ipAddr) do
         assignfollowers(numClients, ipAddr) # add zipf logic
         Process.sleep(5000)
         delay = calculateFrequency(numClients) # add zipf logic
-
+        numThreads = 
+            if 100000/numClients > 1 do
+                round(100000/numClients)
+            else
+                1
+            end
+        
       for client <- 1..numClients do
-            spawn(fn -> Client.generateMultipleTweets("user" <> Integer.to_string(client), delay * client) end)
+            spawn(fn -> Client.generateMultipleTweets("user" <> Integer.to_string(client), delay * client, numThreads) end)
             
-            spawn(fn -> Client.createMultipleRetweets("user" <> Integer.to_string(client)) end)
+            spawn(fn -> Client.createMultipleRetweets("user" <> Integer.to_string(client), numThreads) end)
       end
 end
 

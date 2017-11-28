@@ -3,14 +3,14 @@
   defmodule Client do
   use GenServer
 
-   def generateMultipleTweets(username, delay) do
-      for _ <- 1..8 do
+   def generateMultipleTweets(username, delay, n) do
+      for _ <- 1..n do
         spawn(fn -> generateTweets(username, delay) end)
         end
    end
 
-   def createMultipleRetweets(username) do
-        for _ <- 1..8 do
+   def createMultipleRetweets(username, n) do
+        for _ <- 1..n do
         spawn(fn -> createRetweets(username) end)
         end
    end
