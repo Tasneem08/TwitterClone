@@ -70,7 +70,7 @@
 
   def handle_cast({:register_user, username}, state) do
      [username, serverIP, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
-     GenServer.cast({:main_server, String.to_atom("mainserver@"<>serverIP)},{:registerMe, username, findIP()})
+     GenServer.cast({:main_server, String.to_atom("mainserver@"<>serverIP)},{:registerMe, username, Node.self()})
     {:noreply, [username, serverIP, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
 
