@@ -27,8 +27,12 @@
   end
 
   def start_link(username) do
-      clientname = String.to_atom(username)
+      #clientname = String.to_atom(username)
       #Create node .. node start
+      clientname = String.to_atom(username<>"@"<>findIP())
+      Node.start(clientname)
+      Node.set_cookie(String.to_atom("twitter"))
+
       GenServer.start_link(__MODULE__, [username, MapSet.new,[],[],[],[]],name: clientname)
   end
 
@@ -61,6 +65,7 @@
 
   def register_user(username, server) do
     #node.connect with server .. server
+    Node.connect(String.to_atom("mainserver@"<>server))
     GenServer.cast(:main_server,{:registerMe, username})
   end
 
@@ -159,6 +164,24 @@
 
   def unsubscribe(selfId, username) do
     GenServer.cast(:main_server,{:unsubscribeTo, selfId, username})
+  end
+
+  def findIP do
+    {ops_sys, extra } = :os.type
+    ip = 
+    case ops_sys do
+      :unix -> 
+            if extra == :linux do
+              {:ok, [addr: ip]} = :inet.ifget('ens3', [:addr])
+              to_string(:inet.ntoa(ip))
+            else
+              {:ok, [addr: ip]} = :inet.ifget('en0', [:addr])
+              to_string(:inet.ntoa(ip))
+            end
+      :win32 -> {:ok, [ip, _]} = :inet.getiflist
+               to_string(ip)
+    end
+  (ip)
   end
 
   end
