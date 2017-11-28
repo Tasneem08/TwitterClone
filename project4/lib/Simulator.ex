@@ -1,24 +1,48 @@
 defmodule Simulator do
 
 def main(args) do
-    total = List.first(args) |> String.to_integer()
-    # Start the engine
-    Engine.start_link()
+    try do
+        [ipAddr, num] = args
+        total = String.to_integer(num)
+
+        setupStaticData(total)
+        # Start the clients
+         start_Client(ipAddr)
     
-    setupStaticData(total)
-    # Start the clients
-    start_Client()
+        # Start the simulation
+        simulate()
+        Process.sleep(15000)
+        spawn(fn-> getMyMentions() end)
+        Process.sleep(5000)
+        spawn(fn-> searchByHashtag() end)
+        Process.sleep(5000)
+        spawn(fn-> killClients(ipAddr) end)
+       
+    rescue
+        MatchError -> Engine.setupEngine()
+    end
+        :timer.sleep(:infinity)
+  end
+
+# def main(args) do
+#     total = List.first(args) |> String.to_integer()
+#     # Start the engine
+#     Engine.start_link()
     
-    # Start the simulation
-    simulate()
-    Process.sleep(15000)
-    spawn(fn-> getMyMentions() end)
-    Process.sleep(5000)
-    spawn(fn-> searchByHashtag() end)
-    Process.sleep(5000)
-    spawn(fn-> killClients() end)
-    :timer.sleep(:infinity)
-end
+#     setupStaticData(total)
+#     # Start the clients
+#     start_Client()
+    
+#     # Start the simulation
+#     simulate()
+#     Process.sleep(15000)
+#     spawn(fn-> getMyMentions() end)
+#     Process.sleep(5000)
+#     spawn(fn-> searchByHashtag() end)
+#     Process.sleep(5000)
+#     spawn(fn-> killClients() end)
+#     :timer.sleep(:infinity)
+# end
 
 def setupStaticData(total) do
     :ets.new(:staticFields, [:named_table])
@@ -28,11 +52,19 @@ def setupStaticData(total) do
 
 end
  
-def start_Client() do
+# def start_Client() do
+#     [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
+#      for client <- 1..numClients do
+#             spawn(fn -> Client.start_link("user" <> Integer.to_string(client)) end)
+#             spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
+#      end
+# end
+
+def start_Client(ipAddr) do
     [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
      for client <- 1..numClients do
             spawn(fn -> Client.start_link("user" <> Integer.to_string(client)) end)
-            spawn(fn -> Client.register_user("user" <> Integer.to_string(client)) end)
+            spawn(fn -> Client.register_user("user" <> Integer.to_string(client), ipAddr) end)
      end
 end
 
@@ -63,7 +95,7 @@ def searchByHashtag() do
 
 end
 
-def killClients() do
+def killClients(ipAddr) do
     [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
     
     # select 5 random to kill and store these ids in a list
@@ -83,7 +115,7 @@ def killClients() do
     IO.inspect "STARTING AGAIN!!!!!"
     for j <- clientIds do
         spawn(fn -> Client.start_link("user" <> Integer.to_string(j)) end)
-        spawn(fn -> Client.register_user("user" <> Integer.to_string(j)) end)
+        spawn(fn -> Client.register_user("user" <> Integer.to_string(j), ipAddr) end)
     end
 
 end

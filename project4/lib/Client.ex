@@ -28,6 +28,7 @@
 
   def start_link(username) do
       clientname = String.to_atom(username)
+      #Create node .. node start
       GenServer.start_link(__MODULE__, [username, MapSet.new,[],[],[],[]],name: clientname)
   end
 
@@ -58,7 +59,8 @@
     {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
 
-  def register_user(username) do
+  def register_user(username, server) do
+    #node.connect with server .. server
     GenServer.cast(:main_server,{:registerMe, username})
   end
 

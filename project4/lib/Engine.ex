@@ -1,6 +1,11 @@
 defmodule Engine do
 use GenServer
 
+  def setupEngine() do
+  # node start
+    start_link()
+  end
+
   def start_link() do
       hashtagMap = %{}
       mentionsMap = %{}
@@ -18,11 +23,11 @@ use GenServer
       [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
       followersTable = 
       if Map.has_key?(followersTable, username) do
-        # IO.puts "#{username} is an existing user."
+        IO.puts "#{username} is an existing user."
         spawn(fn -> GenServer.cast(String.to_atom(username),{:queryYourTweets}) end)
         followersTable
       else
-        # IO.puts "#{username} is an NEW user... Updating the tables now.."
+        IO.puts "#{username} is an NEW user... Updating the tables now.."
         Map.put(followersTable, username, MapSet.new)
       end
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
