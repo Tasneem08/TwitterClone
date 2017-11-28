@@ -5,12 +5,12 @@ def main(args) do
         [ipAddr, num] = args
         total = String.to_integer(num)
 
-        setupStaticData(total)
+        setupStaticData(total, ipAddr)
         # Start the clients
          start_Client(ipAddr)
-    
+        Process.sleep(5000)
         # Start the simulation
-        simulate()
+        simulate(ipAddr)
         Process.sleep(15000)
         spawn(fn-> getMyMentions() end)
         Process.sleep(5000)
@@ -25,8 +25,7 @@ def main(args) do
   end
 
 def log(str) do
-    IO.inspect "Trying to print something"
-    # IO.puts str
+    IO.puts str
 end
 # def main(args) do
 #     total = List.first(args) |> String.to_integer()
@@ -48,12 +47,15 @@ end
 #     :timer.sleep(:infinity)
 # end
 
-def setupStaticData(total) do
+def setupStaticData(total, serverIP) do
+      clientname = String.to_atom("client"<>"@"<>findIP())
+      Node.start(clientname)
+      Node.set_cookie(String.to_atom("twitter"))
     :ets.new(:staticFields, [:named_table])
     :ets.insert(:staticFields, {"totalNodes", total})
     :ets.insert(:staticFields, {"sampleTweets", ["Please come to my party. ","Don't you dare come to my party. ","Why won't you invite me to your party? ","But I wanna come to your party. ","Okay I won't come to your party. "]})
     :ets.insert(:staticFields, {"hashTags", ["#adoptdontshop ","#UFisGreat ","#Fall2017 ","#DinnerParty ","#cutenesscatified "]})
-
+    Node.connect(String.to_atom("mainserver@"<>serverIP))
 end
  
 # def start_Client() do
@@ -67,8 +69,8 @@ end
 def start_Client(ipAddr) do
     [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
      for client <- 1..numClients do
-            spawn(fn -> Client.start_link("user" <> Integer.to_string(client)) end)
-            spawn(fn -> Client.register_user("user" <> Integer.to_string(client), ipAddr) end)
+            Client.start_link("user" <> Integer.to_string(client), ipAddr)
+            Client.register_user("user" <> Integer.to_string(client), ipAddr)
      end
 end
 
@@ -118,21 +120,22 @@ def killClients(ipAddr) do
 
     IO.inspect "STARTING AGAIN!!!!!"
     for j <- clientIds do
-        spawn(fn -> Client.start_link("user" <> Integer.to_string(j)) end)
+        spawn(fn -> Client.start_link("user" <> Integer.to_string(j), ipAddr) end)
         spawn(fn -> Client.register_user("user" <> Integer.to_string(j), ipAddr) end)
     end
 
 end
 
-def simulate() do 
+def simulate(ipAddr) do 
         [{_, numClients}] = :ets.lookup(:staticFields, "totalNodes")
-        assignfollowers(numClients) # add zipf logic
+        assignfollowers(numClients, ipAddr) # add zipf logic
+        Process.sleep(5000)
         delay = calculateFrequency(numClients) # add zipf logic
 
       for client <- 1..numClients do
-            spawn(fn -> Client.generateTweets("user" <> Integer.to_string(client), delay * client) end)
+            spawn(fn -> Client.generateMultipleTweets("user" <> Integer.to_string(client), delay * client) end)
             
-            spawn(fn -> Client.createRetweets("user" <> Integer.to_string(client)) end)
+            spawn(fn -> Client.createMultipleRetweets("user" <> Integer.to_string(client)) end)
       end
 end
 
@@ -145,7 +148,7 @@ def getSum([], sum) do
     sum
 end
 
-def assignfollowers(numClients) do
+def assignfollowers(numClients, ipAddr) do
     # calculate cons somehow 
     
     harmonicList = for j <- 1..numClients do
@@ -157,7 +160,7 @@ def assignfollowers(numClients) do
     for tweeter <- 1..numClients, i <- 1..round(Float.floor(c/tweeter)) do
             follower = ("user" <> Integer.to_string(Enum.random(1..numClients)))
             mainUser = ("user" <> Integer.to_string(tweeter))
-            spawn(fn -> Client.subscribe_to(follower, mainUser) end)
+            spawn(fn -> Client.subscribe_to(follower, mainUser, ipAddr) end)
     end
     # GenServer.cast(:main_server,{:printMapping})
 end
@@ -205,4 +208,22 @@ def getTweetContent(username) do
     def condense([], string) do
         string
     end
+
+      def findIP do
+    {ops_sys, extra } = :os.type
+    ip = 
+    case ops_sys do
+      :unix -> 
+            if extra == :linux do
+              {:ok, [addr: ip]} = :inet.ifget('ens3', [:addr])
+              to_string(:inet.ntoa(ip))
+            else
+              {:ok, [addr: ip]} = :inet.ifget('en0', [:addr])
+              to_string(:inet.ntoa(ip))
+            end
+      :win32 -> {:ok, [ip, _]} = :inet.getiflist
+               to_string(ip)
+    end
+  (ip)
+  end
 end

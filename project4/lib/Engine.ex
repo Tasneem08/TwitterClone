@@ -17,36 +17,41 @@ use GenServer
       followersTable = %{}
       followsTable = %{}
       tweetsDB = %{}
-      GenServer.start_link(__MODULE__, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap], name: :main_server)
+      userToIPMap = %{}
+      GenServer.start_link(__MODULE__, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap], name: :main_server)
   end
 
-  def init(followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap) do
-      {:ok, {followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap}}
+  def init(followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap) do
+      {:ok, {followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap}}
   end
 
-  def handle_cast({:registerMe, username}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
+  def handle_cast({:registerMe, username, userIP}, state) do
+      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
+      userToIPMap = Map.put(userToIPMap, username, userIP)
       followersTable = 
       if Map.has_key?(followersTable, username) do
-        Simulator.log("#{username} is an existing user.")
-        spawn(fn -> GenServer.cast(String.to_atom(username),{:queryYourTweets}) end)
+        # Simulator.log("#{username} is an existing user.")
+        # spawn(fn -> GenServer.cast({String.to_atom(username), String.to_atom(username<>"@"<>userIP)},{:queryYourTweets}) end)
+        spawn(fn -> GenServer.cast({String.to_atom(username), userIP},{:queryYourTweets}) end)
+        # Map.put(userToIPMap, username, userIP)
         followersTable
       else
-        Simulator.log("#{username} is an NEW user... Updating the tables now..")
+        # Simulator.log("#{username} is an NEW user... Updating the tables now..")
+
         Map.put(followersTable, username, MapSet.new)
       end
-      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
+      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
   end
 
 def handle_cast({:printMapping}, state) do
-    [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
+    [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
     # IO.inspect "PRINTING MAPPING"
     # IO.inspect followersTable
-    {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
+    {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
 end
 
   def handle_cast({:subscribeTo, selfId, username}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
+      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
       mapSet = 
       if Map.get(followersTable, username) == nil do
         MapSet.new
@@ -65,11 +70,11 @@ end
       end 
       mapSet2 = MapSet.put(mapSet2, username)
       followsTable = Map.put(followsTable, selfId, mapSet2)
-      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
+      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
   end
 
   def handle_cast({:unsubscribeTo, selfId, username}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
+      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
       mapSet = Map.get(followersTable, username)
       mapSet = MapSet.delete(mapSet, selfId);
       followersTable = Map.put(followersTable, username, mapSet)
@@ -77,11 +82,11 @@ end
       mapSet = Map.get(followsTable, selfId)
       mapSet = MapSet.delete(mapSet, username);
       followsTable = Map.put(followsTable, selfId, mapSet)
-      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
+      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
   end
 
   def handle_cast({:tweet, username, tweetBody}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
+      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
       {content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
       Simulator.log("AT SERVER #{username} posted a new tweet : #{content}")
@@ -91,14 +96,14 @@ end
       hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
       
       #broadcast 
-      spawn(fn->sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, content)end)
-      spawn(fn->sendToFollowers(mentions, index, username, content)end)
+      spawn(fn->sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), userToIPMap, index, username, content)end)
+      spawn(fn->sendToFollowers(mentions, userToIPMap, index, username, content)end)
 
-      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
+      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
   end
 
     def handle_cast({:reTweet, username, tweetIndex}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
+      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
       #{content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
       {original_tweeter, content} = Map.get(tweetsDB, tweetIndex)
@@ -115,13 +120,13 @@ end
       #hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
     #   IO.inspect tweetsDB
       #broadcast 
-      spawn(fn -> sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), index, username, {original_tweeter, content})end)
+      spawn(fn -> sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), userToIPMap, index, username, {original_tweeter, content})end)
       
-      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
+      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
   end
 
   def handle_call({:myMentions, username}, _from, state) do
-      [_, _, tweetsDB, _, mentionsMap] = state
+      [_, _, tweetsDB, _, mentionsMap, userToIPMap] = state
       mentions = 
       if Map.get(mentionsMap, username) == nil do
         MapSet.new
@@ -133,7 +138,7 @@ end
   end
 
   def handle_call({:tweetsWithHashtag, hashtag}, _from, state) do
-      [_, _, tweetsDB, hashtagMap, _] = state
+      [_, _, tweetsDB, hashtagMap, _, userToIPMap] = state
       tweets = 
       if Map.get(hashtagMap, hashtag) == nil do
         MapSet.new
@@ -145,7 +150,7 @@ end
   end
 
   def handle_call({:queryTweets, username}, _from, state) do
-      [_, followsTable, tweetsDB, _, mentionsMap] = state
+      [_, followsTable, tweetsDB, _, mentionsMap, userToIPMap] = state
       mapSet = 
       if Map.get(followsTable, username) == nil do
         MapSet.new
@@ -179,12 +184,14 @@ end
         relevantTweets
   end
 
-  def sendToFollowers([first | followers], index, username, content) do
-      GenServer.cast(String.to_atom(first),{:receiveTweet, index, username, content}) 
-      sendToFollowers(followers, index, username, content)
+  def sendToFollowers([first | followers], userToIPMap, index, username, content) do
+      spawn(fn->GenServer.cast({String.to_atom(first), Map.get(userToIPMap,first)},{:receiveTweet, index, username, content})end) 
+      # spawn(fn->GenServer.cast(String.to_atom(first),{:receiveTweet, index, username, content})end) 
+
+      sendToFollowers(followers, userToIPMap, index, username, content)
   end
   
-  def sendToFollowers([], _, _, _) do
+  def sendToFollowers([], _, _, _, _) do
   end
 
   def getHashtags(tweetsDB, [index | rest], hashtagTweets) do
