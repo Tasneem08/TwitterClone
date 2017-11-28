@@ -2,7 +2,10 @@ defmodule Engine do
 use GenServer
 
   def setupEngine() do
-  # node start
+    # node start
+    Node.start(String.to_atom("mainserver@"<>findIP()))
+    cookie_name = String.to_atom("twitter")
+    Node.set_cookie(cookie_name)
     start_link()
   end
 
@@ -79,7 +82,7 @@ end
       [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
       {content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
-    #   IO.puts "AT SERVER #{username} posted a new tweet : #{content}"
+      IO.puts "AT SERVER #{username} posted a new tweet : #{content}"
       index = Kernel.map_size(tweetsDB)
       tweetsDB = Map.put(tweetsDB, index, {username, content})
       mentionsMap = updateMentionsMap(mentionsMap, mentions, index)
@@ -234,4 +237,22 @@ end
       hashtagMap
   end
 
+  # Returns the IP address of the machine the code is being run on.
+  def findIP do
+    {ops_sys, extra } = :os.type
+    ip = 
+    case ops_sys do
+      :unix -> 
+            if extra == :linux do
+              {:ok, [addr: ip]} = :inet.ifget('ens3', [:addr])
+              to_string(:inet.ntoa(ip))
+            else
+              {:ok, [addr: ip]} = :inet.ifget('en0', [:addr])
+              to_string(:inet.ntoa(ip))
+            end
+      :win32 -> {:ok, [ip, _]} = :inet.getiflist
+               to_string(ip)
+    end
+  (ip)
+  end
 end
