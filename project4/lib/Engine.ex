@@ -3,10 +3,12 @@ use GenServer
 
   def setupEngine() do
     # node start
+    IO.inspect findIP()
     Node.start(String.to_atom("mainserver@"<>findIP()))
     cookie_name = String.to_atom("twitter")
     Node.set_cookie(cookie_name)
     start_link()
+    :timer.sleep(:infinity)
   end
 
   def start_link() do
@@ -26,11 +28,11 @@ use GenServer
       [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
       followersTable = 
       if Map.has_key?(followersTable, username) do
-        IO.puts "#{username} is an existing user."
+        Simulator.log("#{username} is an existing user.")
         spawn(fn -> GenServer.cast(String.to_atom(username),{:queryYourTweets}) end)
         followersTable
       else
-        IO.puts "#{username} is an NEW user... Updating the tables now.."
+        Simulator.log("#{username} is an NEW user... Updating the tables now..")
         Map.put(followersTable, username, MapSet.new)
       end
       {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap]}
@@ -82,7 +84,7 @@ end
       [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap] = state
       {content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
-      IO.puts "AT SERVER #{username} posted a new tweet : #{content}"
+      Simulator.log("AT SERVER #{username} posted a new tweet : #{content}")
       index = Kernel.map_size(tweetsDB)
       tweetsDB = Map.put(tweetsDB, index, {username, content})
       mentionsMap = updateMentionsMap(mentionsMap, mentions, index)

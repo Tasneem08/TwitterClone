@@ -24,6 +24,10 @@ def main(args) do
         :timer.sleep(:infinity)
   end
 
+def log(str) do
+    IO.inspect "Trying to print something"
+    # IO.puts str
+end
 # def main(args) do
 #     total = List.first(args) |> String.to_integer()
 #     # Start the engine

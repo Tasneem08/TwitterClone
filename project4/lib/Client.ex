@@ -50,9 +50,9 @@
      seenTweets = MapSet.put(seenTweets, index)
       if is_tuple(content) do
         {org_tweeter, text} = content
-        IO.inspect " #{username} sees #{tweeter} retweeted #{org_tweeter} ka post : #{text}"
+        Simulator.log(" #{username} sees #{tweeter} retweeted #{org_tweeter} ka post : #{text}")
       else
-        IO.inspect " #{username} sees #{tweeter} posted a new tweet : #{content}"
+        Simulator.log(" #{username} sees #{tweeter} posted a new tweet : #{content}")
       end
       {:noreply, [username, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
