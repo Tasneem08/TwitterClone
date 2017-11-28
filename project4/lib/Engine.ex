@@ -3,8 +3,8 @@ use GenServer
 
   def setupEngine() do
     # node start
-    IO.inspect findIP()
-    Node.start(String.to_atom("mainserver@"<>findIP()))
+    IO.inspect findIP(0)
+    Node.start(String.to_atom("mainserver@"<>findIP(0)))
     cookie_name = String.to_atom("twitter")
     Node.set_cookie(cookie_name)
     start_link()
@@ -240,21 +240,13 @@ end
   end
 
   # Returns the IP address of the machine the code is being run on.
-  def findIP do
-    {ops_sys, extra } = :os.type
-    ip = 
-    case ops_sys do
-      :unix -> 
-            if extra == :linux do
-              {:ok, [addr: ip]} = :inet.ifget('ens3', [:addr])
-              to_string(:inet.ntoa(ip))
-            else
-              {:ok, [addr: ip]} = :inet.ifget('en0', [:addr])
-              to_string(:inet.ntoa(ip))
-            end
-      :win32 -> {:ok, [ip, _]} = :inet.getiflist
-               to_string(ip)
+  def findIP(iter) do
+    list = Enum.at(:inet.getif() |> Tuple.to_list, 1)
+    if (elem(Enum.at(list, iter), 0) == {127, 0, 0, 1}) do
+      findIP(iter+1)
+    else
+      elem(Enum.at(list, iter), 0) |> Tuple.to_list |> Enum.join(".")
     end
-  (ip)
   end
+
 end
