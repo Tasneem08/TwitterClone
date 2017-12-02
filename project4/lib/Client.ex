@@ -168,7 +168,7 @@
   
   def findHashTags([head|tail],hashList) do
     if(String.first(head)=="#") do
-      # [_, elem] = String.split(head, "#") 
+      [_, elem] = String.split(head, "#") 
       findHashTags(tail,List.insert_at(hashList, 0, head))
     else 
       findHashTags(tail,hashList)

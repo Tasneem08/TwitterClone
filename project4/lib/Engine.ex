@@ -8,7 +8,6 @@ use GenServer
     cookie_name = String.to_atom("twitter")
     Node.set_cookie(cookie_name)
     start_link()
-    :timer.sleep(:infinity)
   end
 
   def start_link() do
@@ -60,7 +59,7 @@ use GenServer
 
       mapSet = MapSet.put(mapSet, selfId)
 
-      :ets.insert(:followersTable, {username, mapSet})
+      spawn(fn->:ets.insert(:followersTable, {username, mapSet}) end)
 
       mapSet2 = 
       if :ets.lookup(:followsTable, selfId) == [] do
@@ -72,7 +71,7 @@ use GenServer
 
       mapSet2 = MapSet.put(mapSet2, username)
       # followsTable = Map.put(followsTable, selfId, mapSet2)
-      :ets.insert(:followsTable, {selfId, mapSet2})
+      spawn(fn->:ets.insert(:followsTable, {selfId, mapSet2})end)
       {:noreply, [nextID]}
   end
 
@@ -94,14 +93,14 @@ use GenServer
       # insert into tweetsDB get size - index / key. insert value mei tuple.
       Simulator.log("AT SERVER #{username} posted a new tweet : #{content}")
       # index = Kernel.map_size(tweetsDB)
-      :ets.insert(:tweetsDB, {nextID, username, content})
+      spawn(fn->:ets.insert(:tweetsDB, {nextID, username, content})end)
       # tweetsDB = Map.put(tweetsDB, index, {username, content})
-      spawn(fn-> updateMentionsMap(mentions, nextID) end)
-      spawn(fn-> updateHashTagMap(hashtags, nextID) end)
+      spawn(fn -> updateMentionsMap(mentions, nextID) end)
+      spawn(fn -> updateHashTagMap(hashtags, nextID) end)
       
       #broadcast 
-      spawn(fn->sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), userToIPMap, index, username, content) end)
-      spawn(fn->sendToFollowers(mentions, userToIPMap, index, username, content) end)
+      spawn(fn->sendToFollowers(MapSet.to_list(elem(List.first(:ets.lookup(:followersTable, username)), 1)), nextID, username, content) end)
+      spawn(fn->sendToFollowers(mentions, nextID, username, content) end)
 
       {:noreply, [nextID+1]}
   end
@@ -111,7 +110,7 @@ use GenServer
       #{content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
       
-      [{tweetIndex, original_tweeter, content}] = :ets.lookup(:tweetsDB, {tweetIndex})
+      [{tweetIndex, original_tweeter, content}] = :ets.lookup(:tweetsDB, tweetIndex)
       
       {original_tweeter, content} = 
       if is_tuple(content) do 
@@ -128,7 +127,7 @@ use GenServer
       #hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
     #   IO.inspect tweetsDB
       #broadcast 
-      spawn(fn -> sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), userToIPMap, index, username, {original_tweeter, content})end)
+      spawn(fn -> sendToFollowers(MapSet.to_list(elem(List.first(:ets.lookup(:followersTable, username)), 1)), nextID, username, {original_tweeter, content})end)
       
       {:noreply, [nextID+1]}
   end
@@ -211,20 +210,20 @@ use GenServer
     List.flatten(result)
   end
 
-  def sendToFollowers([first | followers], userToIPMap, index, username, content) do
+  def sendToFollowers([first | followers], index, username, content) do
       spawn(fn->GenServer.cast({String.to_atom(first), elem(List.first(:ets.lookup(:userToIPMap, first)), 1)},{:receiveTweet, index, username, content})end) 
       # spawn(fn->GenServer.cast(String.to_atom(first),{:receiveTweet, index, username, content})end) 
 
-      sendToFollowers(followers, userToIPMap, index, username, content)
+      sendToFollowers(followers, index, username, content)
   end
   
-  def sendToFollowers([], _, _, _, _) do
+  def sendToFollowers([], _, _, _) do
   end
 
   def getHashtags([index | rest], hashtagTweets) do
       [{index, username, content}] = :ets.lookup(:tweetsDB, index)
       hashtagTweets = List.insert_at(hashtagTweets, 0, {index, {username, content}})
-      getHashtags(tweetsDB, rest, hashtagTweets)
+      getHashtags(rest, hashtagTweets)
   end
 
   def getHashtags([], hashtagTweets) do
@@ -265,11 +264,11 @@ use GenServer
           MapSet.put(element, index)
       else
           [{_,element}] = :ets.lookup(:hashtagMap, hashtag)
-        MapSet.put(element, index)
+          MapSet.put(element, index)
       end
 
       :ets.insert(:hashtagMap, {hashtag, elems})
-      updateHashTagMap(hashtag, index)
+      updateHashTagMap(hashtags, index)
   end
 
   def updateHashTagMap([], _) do
