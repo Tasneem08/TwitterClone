@@ -39,11 +39,6 @@
   end
 
   def start_link(username, serverIP) do
-      user = String.to_atom(username)
-      #Create node .. node start
-      # clientname = String.to_atom(username<>"@"<>findIP())
-      # Node.start(clientname)
-      # Node.set_cookie(String.to_atom("twitter"))
       GenServer.start_link(__MODULE__, [username, serverIP, MapSet.new,[],[],[],[]],name: String.to_atom(username))
   end
 
@@ -74,20 +69,10 @@
     {:noreply, [username, serverIP, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
 
-  def register_user(username, serverIP) do
-    #node.connect with server .. server
-    # Node.connect(String.to_atom("mainserver@"<>serverIP))
-    GenServer.cast({:main_server, String.to_atom("mainserver@"<>serverIP)},{:registerMe, username, Node.self()})
-  end
-
   def handle_cast({:retweet, selfId, tweetIndex}, state) do
      [username, serverIP, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
      GenServer.cast({:main_server, String.to_atom("mainserver@"<>serverIP)},{:reTweet, selfId, tweetIndex}) 
      {:noreply, [username, serverIP, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
-  end
-  
-  def subscribe_to(selfId, username, serverIP) do
-    GenServer.cast({:main_server, String.to_atom("mainserver@"<>serverIP)},{:subscribeTo, selfId, username}) 
   end
 
   def handle_call({:getRetweetIndex}, _from, state) do
@@ -99,12 +84,28 @@
      {:reply, selectedTweet, [username, serverIP, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
 
-  
   def handle_cast({:subscribe_to,selfId, username}, state) do
      [username, serverIP, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets] = state
       GenServer.cast({:main_server, String.to_atom("mainserver@"<>serverIP)},{:subscribeTo, selfId, username}) 
      {:noreply, [username, serverIP, seenTweets,hashtag_list,mentions_list,relevantTweets,mentionedTweets]}
   end
+
+  def register_user(username, serverIP) do
+    
+    # Node.connect(String.to_atom("mainserver@"<>serverIP))
+    GenServer.cast({:main_server, String.to_atom("mainserver@"<>serverIP)},{:registerMe, username, Node.self()})
+  end
+
+
+  
+  def subscribe_to(selfId, username, serverIP) do
+    GenServer.cast({:main_server, String.to_atom("mainserver@"<>serverIP)},{:subscribeTo, selfId, username}) 
+  end
+
+
+
+  
+
 
 #change
   # def handle_cast({:search_by_hashtags, hashtag}, state) do

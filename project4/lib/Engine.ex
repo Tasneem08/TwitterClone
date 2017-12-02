@@ -21,11 +21,11 @@ use GenServer
   end
 
   def init(:ok) do
-      {:ok, [0]} #Tweet ID
+      {:ok, 0} #Tweet ID
   end
 
   def handle_cast({:registerMe, username, userIP}, state) do
-      [nextID] = state
+      nextID = state
       register_status = :ets.insert_new(:userToIPMap, {username, userIP})
       #userToIPMap = Map.put(userToIPMap, username, userIP)
       # followersTable = 
@@ -36,7 +36,7 @@ use GenServer
         # Map.put(userToIPMap, username, userIP)
         # followersTable
         end
-      {:noreply, [nextID]}
+      {:noreply, nextID}
   end
 
 # def handle_cast({:printMapping}, state) do
@@ -47,7 +47,7 @@ use GenServer
 # end
 
   def handle_cast({:subscribeTo, selfId, username}, state) do
-      [nextID] = state
+      nextID = state
 
       mapSet =
       if :ets.lookup(:followersTable, username) == [] do
@@ -72,7 +72,7 @@ use GenServer
       mapSet2 = MapSet.put(mapSet2, username)
       # followsTable = Map.put(followsTable, selfId, mapSet2)
       spawn(fn->:ets.insert(:followsTable, {selfId, mapSet2})end)
-      {:noreply, [nextID]}
+      {:noreply, nextID}
   end
 
   # def handle_cast({:unsubscribeTo, selfId, username}, state) do
@@ -88,7 +88,7 @@ use GenServer
   # end
 
   def handle_cast({:tweet, username, tweetBody}, state) do
-      [nextID] = state
+      nextID = state
       {content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
       Simulator.log("AT SERVER #{username} posted a new tweet : #{content}")
@@ -102,26 +102,27 @@ use GenServer
       spawn(fn->sendToFollowers(MapSet.to_list(elem(List.first(:ets.lookup(:followersTable, username)), 1)), nextID, username, content) end)
       spawn(fn->sendToFollowers(mentions, nextID, username, content) end)
 
-      {:noreply, [nextID+1]}
+      {:noreply, nextID+1}
   end
 
     def handle_cast({:reTweet, username, tweetIndex}, state) do
-      [nextID] = state
+      nextID = state
       #{content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
       
-      [{tweetIndex, original_tweeter, content}] = :ets.lookup(:tweetsDB, tweetIndex)
+      [{_, original_tweeter, content}] = :ets.lookup(:tweetsDB, tweetIndex)
       
-      {original_tweeter, content} = 
+      {org_tweeter, contentfinal} = 
       if is_tuple(content) do 
-            {original_tweeter, content} = content
+            {org_tweet, org_content} = content
+            {org_tweet, org_content}
       else
             {original_tweeter, content}
       end
       
       # index = Kernel.map_size(tweetsDB)
       # tweetsDB = Map.put(tweetsDB, nextID, {username, {original_tweeter, content}})
-      :ets.insert_new(:tweetsDB, {nextID, username, {original_tweeter, content}})
+      :ets.insert_new(:tweetsDB, {nextID, username, {org_tweeter, contentfinal}})
 
       #mentionsMap = updateMentionsMap(mentionsMap, mentions, index)
       #hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
@@ -129,12 +130,10 @@ use GenServer
       #broadcast 
       spawn(fn -> sendToFollowers(MapSet.to_list(elem(List.first(:ets.lookup(:followersTable, username)), 1)), nextID, username, {original_tweeter, content})end)
       
-      {:noreply, [nextID+1]}
+      {:noreply, nextID+1}
   end
 
   def handle_cast({:myMentions, username}, state) do
-      [nextID] = state
-
       mentions =
       if :ets.lookup(:mentionsMap, username) == [] do
         MapSet.new
@@ -148,7 +147,6 @@ use GenServer
   end
 
   def handle_cast({:tweetsWithHashtag, hashtag, username}, state) do
-      [nextID] = state
       tweets = 
       if :ets.lookup(:hashtagMap, hashtag) == [] do
         MapSet.new
@@ -163,7 +161,6 @@ use GenServer
   end
 
   def handle_cast({:queryTweets, username}, state) do
-      [nextID] = state
       mapSet = 
       if :ets.lookup(:followsTable,username) == [] do
         MapSet.new
