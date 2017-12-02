@@ -12,101 +12,107 @@ use GenServer
   end
 
   def start_link() do
-      hashtagMap = %{}
-      mentionsMap = %{}
-      followersTable = %{}
-      followsTable = %{}
-      tweetsDB = %{}
-      userToIPMap = %{}
-      GenServer.start_link(__MODULE__, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap], name: :main_server)
+      :ets.new(:hashtagMap, [:set, :public, :named_table])
+      :ets.new(:mentionsMap, [:set, :public, :named_table])
+      :ets.new(:followersTable, [:set, :public, :named_table])
+      :ets.new(:followsTable, [:set, :public, :named_table])
+      :ets.new(:tweetsDB, [:set, :public, :named_table])
+      :ets.new(:userToIPMap, [:set, :public, :named_table])
+      GenServer.start_link(__MODULE__, :ok, name: :main_server)
   end
 
-  def init(followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap) do
-      {:ok, {followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap}}
+  def init(:ok) do
+      {:ok, [0]} #Tweet ID
   end
 
   def handle_cast({:registerMe, username, userIP}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
-      userToIPMap = Map.put(userToIPMap, username, userIP)
-      followersTable = 
-      if Map.has_key?(followersTable, username) do
+      [nextID] = state
+      register_status = :ets.insert_new(:userToIPMap, {username, userIP})
+      #userToIPMap = Map.put(userToIPMap, username, userIP)
+      # followersTable = 
+      if register_status == false do
         # Simulator.log("#{username} is an existing user.")
         # spawn(fn -> GenServer.cast({String.to_atom(username), String.to_atom(username<>"@"<>userIP)},{:queryYourTweets}) end)
         spawn(fn -> GenServer.cast({String.to_atom(username), userIP},{:queryYourTweets}) end)
         # Map.put(userToIPMap, username, userIP)
-        followersTable
-      else
-        # Simulator.log("#{username} is an NEW user... Updating the tables now..")
-
-        Map.put(followersTable, username, MapSet.new)
-      end
-      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
+        # followersTable
+        end
+      {:noreply, [nextID]}
   end
 
-def handle_cast({:printMapping}, state) do
-    [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
-    # IO.inspect "PRINTING MAPPING"
-    # IO.inspect followersTable
-    {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
-end
+# def handle_cast({:printMapping}, state) do
+#     [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
+#     # IO.inspect "PRINTING MAPPING"
+#     # IO.inspect followersTable
+#     {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
+# end
 
   def handle_cast({:subscribeTo, selfId, username}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
-      mapSet = 
-      if Map.get(followersTable, username) == nil do
-        MapSet.new
+      [nextID] = state
+
+      mapSet =
+      if :ets.lookup(:followersTable, username) == [] do
+          MapSet.new
       else
-       Map.get(followersTable, username)
-      end 
+          [{_, set}] = :ets.lookup(:followersTable, username)
+          set
+      end
 
       mapSet = MapSet.put(mapSet, selfId)
-      followersTable = Map.put(followersTable, username, mapSet)
+
+      :ets.insert(:followersTable, {username, mapSet})
 
       mapSet2 = 
-      if Map.get(followsTable, selfId) == nil do
+      if :ets.lookup(:followsTable, selfId) == [] do
         MapSet.new
       else
-       Map.get(followsTable, selfId)
+       [{_, set}] = :ets.lookup(:followsTable, selfId)
+       set
       end 
+
       mapSet2 = MapSet.put(mapSet2, username)
-      followsTable = Map.put(followsTable, selfId, mapSet2)
-      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
+      # followsTable = Map.put(followsTable, selfId, mapSet2)
+      :ets.insert(:followsTable, {selfId, mapSet2})
+      {:noreply, [nextID]}
   end
 
-  def handle_cast({:unsubscribeTo, selfId, username}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
-      mapSet = Map.get(followersTable, username)
-      mapSet = MapSet.delete(mapSet, selfId);
-      followersTable = Map.put(followersTable, username, mapSet)
+  # def handle_cast({:unsubscribeTo, selfId, username}, state) do
+  #     [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
+  #     mapSet = Map.get(followersTable, username)
+  #     mapSet = MapSet.delete(mapSet, selfId);
+  #     followersTable = Map.put(followersTable, username, mapSet)
 
-      mapSet = Map.get(followsTable, selfId)
-      mapSet = MapSet.delete(mapSet, username);
-      followsTable = Map.put(followsTable, selfId, mapSet)
-      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
-  end
+  #     mapSet = Map.get(followsTable, selfId)
+  #     mapSet = MapSet.delete(mapSet, username);
+  #     followsTable = Map.put(followsTable, selfId, mapSet)
+  #     {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
+  # end
 
   def handle_cast({:tweet, username, tweetBody}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
+      [nextID] = state
       {content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
       Simulator.log("AT SERVER #{username} posted a new tweet : #{content}")
-      index = Kernel.map_size(tweetsDB)
-      tweetsDB = Map.put(tweetsDB, index, {username, content})
-      mentionsMap = updateMentionsMap(mentionsMap, mentions, index)
-      hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
+      # index = Kernel.map_size(tweetsDB)
+      :ets.insert(:tweetsDB, {nextID, username, content})
+      # tweetsDB = Map.put(tweetsDB, index, {username, content})
+      spawn(fn-> updateMentionsMap(mentions, nextID) end)
+      spawn(fn-> updateHashTagMap(hashtags, nextID) end)
       
       #broadcast 
-      spawn(fn->sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), userToIPMap, index, username, content)end)
-      spawn(fn->sendToFollowers(mentions, userToIPMap, index, username, content)end)
+      spawn(fn->sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), userToIPMap, index, username, content) end)
+      spawn(fn->sendToFollowers(mentions, userToIPMap, index, username, content) end)
 
-      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
+      {:noreply, [nextID+1]}
   end
 
     def handle_cast({:reTweet, username, tweetIndex}, state) do
-      [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap] = state
+      [nextID] = state
       #{content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
-      {original_tweeter, content} = Map.get(tweetsDB, tweetIndex)
+      
+      [{tweetIndex, original_tweeter, content}] = :ets.lookup(:tweetsDB, {tweetIndex})
+      
       {original_tweeter, content} = 
       if is_tuple(content) do 
             {original_tweeter, content} = content
@@ -114,80 +120,99 @@ end
             {original_tweeter, content}
       end
       
-      index = Kernel.map_size(tweetsDB)
-      tweetsDB = Map.put(tweetsDB, index, {username, {original_tweeter, content}})
+      # index = Kernel.map_size(tweetsDB)
+      # tweetsDB = Map.put(tweetsDB, nextID, {username, {original_tweeter, content}})
+      :ets.insert_new(:tweetsDB, {nextID, username, {original_tweeter, content}})
+
       #mentionsMap = updateMentionsMap(mentionsMap, mentions, index)
       #hashtagMap = updateHashTagMap(hashtagMap, hashtags, index)
     #   IO.inspect tweetsDB
       #broadcast 
       spawn(fn -> sendToFollowers(MapSet.to_list(Map.get(followersTable, username)), userToIPMap, index, username, {original_tweeter, content})end)
       
-      {:noreply, [followersTable, followsTable, tweetsDB, hashtagMap, mentionsMap, userToIPMap]}
+      {:noreply, [nextID+1]}
   end
 
   def handle_cast({:myMentions, username}, state) do
-      [_, _, tweetsDB, _, mentionsMap, userToIPMap] = state
-      mentions = 
-      if Map.get(mentionsMap, username) == nil do
+      [nextID] = state
+
+      mentions =
+      if :ets.lookup(:mentionsMap, username) == [] do
         MapSet.new
-      else 
-        Map.get(mentionsMap, username)
+      else
+        [{_, set}] = :ets.lookup(:mentionsMap, username)
+        set
       end
-      mentionedTweets = getMentions(tweetsDB, MapSet.to_list(mentions), [])
-      spawn(fn -> GenServer.cast({String.to_atom(username), Map.get(userToIPMap, username)},{:receiveMyMentions, mentionedTweets}) end)
+      mentionedTweets = getMentions(MapSet.to_list(mentions), [])
+      spawn(fn -> GenServer.cast({String.to_atom(username), elem(List.first(:ets.lookup(:userToIPMap, username)), 1)},{:receiveMyMentions, mentionedTweets}) end)
       {:noreply, state}
   end
 
   def handle_cast({:tweetsWithHashtag, hashtag, username}, state) do
-      [_, _, tweetsDB, hashtagMap, _, userToIPMap] = state
+      [nextID] = state
       tweets = 
-      if Map.get(hashtagMap, hashtag) == nil do
+      if :ets.lookup(:hashtagMap, hashtag) == [] do
         MapSet.new
-      else 
-        Map.get(hashtagMap, hashtag)
+      else
+        [{_, set}] = :ets.lookup(:hashtagMap, hashtag)
+        set
       end
-      hashtagTweets = getHashtags(tweetsDB, MapSet.to_list(tweets), [])
-      spawn(fn -> GenServer.cast({String.to_atom(username), Map.get(userToIPMap, username)},{:receiveHashtagResults, hashtagTweets}) end)
+
+      hashtagTweets = getHashtags(MapSet.to_list(tweets), [])
+      spawn(fn -> GenServer.cast({String.to_atom(username), elem(List.first(:ets.lookup(:userToIPMap, username)), 1)},{:receiveHashtagResults, hashtagTweets}) end)
       {:noreply, state}
   end
 
   def handle_cast({:queryTweets, username}, state) do
-      [_, followsTable, tweetsDB, _, mentionsMap, userToIPMap] = state
+      [nextID] = state
       mapSet = 
-      if Map.get(followsTable, username) == nil do
+      if :ets.lookup(:followsTable,username) == [] do
         MapSet.new
       else
-       Map.get(followsTable, username)
+        [{_, set}] = :ets.lookup(:followsTable,username)
+        set
       end 
-      relevantTweets = fetchRelevantTweets(Map.to_list(tweetsDB), mapSet, [])
+      relevantTweets = fetchRelevantTweets(mapSet)
+
       mentions = 
-      if Map.get(mentionsMap, username) == nil do
+      if :ets.lookup(:mentionsMap,username) == [] do
         MapSet.new
       else 
-        Map.get(mentionsMap, username)
+        [{_, set}] = :ets.lookup(:mentionsMap,username)
+        set
       end
-      mentionedTweets = getMentions(tweetsDB, MapSet.to_list(mentions), [])
-      spawn(fn -> GenServer.cast({String.to_atom(username), Map.get(userToIPMap, username)},{:receiveQueryResults, relevantTweets, mentionedTweets}) end)
+
+      mentionedTweets = getMentions(MapSet.to_list(mentions), [])
+      spawn(fn -> GenServer.cast({String.to_atom(username), elem(List.first(:ets.lookup(:userToIPMap, username)), 1)},{:receiveQueryResults, relevantTweets, mentionedTweets}) end)
       {:noreply, state}
   end
   
-  def fetchRelevantTweets([firstTweet |tweetsDB], mapSet, relevantTweets) do
-        {_, {tweeter,content}} = firstTweet
-        relevantTweets = 
-        if MapSet.member?(mapSet, tweeter) do
-            List.insert_at(relevantTweets, 0, firstTweet)
-        else
-            relevantTweets
-        end
-        fetchRelevantTweets(tweetsDB, mapSet, relevantTweets)
-  end
+  # def fetchRelevantTweets([firstTweet |tweetsDB], mapSet, relevantTweets) do
+  #       {_, {tweeter,content}} = firstTweet
+  #       relevantTweets = 
+  #       if MapSet.member?(mapSet, tweeter) do
+  #           List.insert_at(relevantTweets, 0, firstTweet)
+  #       else
+  #           relevantTweets
+  #       end
+  #       fetchRelevantTweets(tweetsDB, mapSet, relevantTweets)
+  # end
 
-  def fetchRelevantTweets([], _, relevantTweets) do
-        relevantTweets
+  # def fetchRelevantTweets([], _, relevantTweets) do
+  #       relevantTweets
+  # end
+  
+  def fetchRelevantTweets(mapSet) do
+      result = 
+      for f_user <- MapSet.to_list(mapSet) do
+        list_of_tweets = List.flatten(:ets.match(:tweetsDB, {:_, f_user, :"$1"}))
+        Enum.map(list_of_tweets, fn tweet -> {f_user, tweet} end)
+    end
+    List.flatten(result)
   end
 
   def sendToFollowers([first | followers], userToIPMap, index, username, content) do
-      spawn(fn->GenServer.cast({String.to_atom(first), Map.get(userToIPMap,first)},{:receiveTweet, index, username, content})end) 
+      spawn(fn->GenServer.cast({String.to_atom(first), elem(List.first(:ets.lookup(:userToIPMap, first)), 1)},{:receiveTweet, index, username, content})end) 
       # spawn(fn->GenServer.cast(String.to_atom(first),{:receiveTweet, index, username, content})end) 
 
       sendToFollowers(followers, userToIPMap, index, username, content)
@@ -196,56 +221,58 @@ end
   def sendToFollowers([], _, _, _, _) do
   end
 
-  def getHashtags(tweetsDB, [index | rest], hashtagTweets) do
-      hashtagTweets = List.insert_at(hashtagTweets, 0, {index, Map.get(tweetsDB, index)})
+  def getHashtags([index | rest], hashtagTweets) do
+      [{index, username, content}] = :ets.lookup(:tweetsDB, index)
+      hashtagTweets = List.insert_at(hashtagTweets, 0, {index, {username, content}})
       getHashtags(tweetsDB, rest, hashtagTweets)
   end
 
-  def getHashtags(_, [], hashtagTweets) do
+  def getHashtags([], hashtagTweets) do
       hashtagTweets
   end
 
-  def getMentions(tweetsDB, [index | rest], mentionedTweets) do
-      mentionedTweets = List.insert_at(mentionedTweets, 0, {index, Map.get(tweetsDB, index)})
-      getMentions(tweetsDB, rest, mentionedTweets)
+  def getMentions([index | rest], mentionedTweets) do
+      [{index, username, content}] = :ets.lookup(:tweetsDB, index)
+      mentionedTweets = List.insert_at(mentionedTweets, 0, {index, {username, content}})
+      getMentions(rest, mentionedTweets)
   end
 
   def getMentions(_, [], mentionedTweets) do
     mentionedTweets
   end
 
-  def updateMentionsMap(mentionsMap, [mention | mentions], index) do
+  def updateMentionsMap([mention | mentions], index) do
       elems = 
-      if Map.has_key?(mentionsMap, mention) do
-        element = Map.get(mentionsMap, mention)
-        MapSet.put(element, index)
+      if :ets.lookup(:mentionsMap, mention) == [] do
+          element = MapSet.new
+          MapSet.put(element, index)
       else
-        element = MapSet.new
+          [{_,element}] = :ets.lookup(:mentionsMap, mention)
         MapSet.put(element, index)
       end
-      mentionsMap = Map.put(mentionsMap, mention, elems)
-      updateMentionsMap(mentionsMap, mentions, index)
+
+      :ets.insert(:mentionsMap, {mention, elems})
+      updateMentionsMap(mentions, index)
   end
 
-  def updateMentionsMap(mentionsMap, [], _) do
-      mentionsMap
+  def updateMentionsMap([], _) do
   end
 
-  def updateHashTagMap(hashtagMap, [hashtag | hashtags], index) do
+  def updateHashTagMap([hashtag | hashtags], index) do
       elems = 
-      if Map.has_key?(hashtagMap, hashtag) do
-        element = Map.get(hashtagMap, hashtag)
-        MapSet.put(element, index)
+      if :ets.lookup(:hashtagMap, hashtag) == [] do
+          element = MapSet.new
+          MapSet.put(element, index)
       else
-        element = MapSet.new
+          [{_,element}] = :ets.lookup(:hashtagMap, hashtag)
         MapSet.put(element, index)
       end
-      hashtagMap = Map.put(hashtagMap, hashtag, elems)
-      updateHashTagMap(hashtagMap, hashtags, index)
+
+      :ets.insert(:hashtagMap, {hashtag, elems})
+      updateHashTagMap(hashtag, index)
   end
 
-  def updateHashTagMap(hashtagMap, [], _) do
-      hashtagMap
+  def updateHashTagMap([], _) do
   end
 
   # Returns the IP address of the machine the code is being run on.
