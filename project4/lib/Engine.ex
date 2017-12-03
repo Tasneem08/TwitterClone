@@ -112,7 +112,7 @@ use GenServer
       # insert into tweetsDB get size - index / key. insert value mei tuple.
       
       [{_, original_tweeter, content}] = :ets.lookup(:tweetsDB, tweetIndex)
-      
+      Simulator.log("TweetID: #{nextID} => #{username} posted a retweet of tweetID #{tweetIndex}")
       {org_tweeter, contentfinal} = 
       if is_tuple(content) do 
             {org_tweet, org_content} = content
