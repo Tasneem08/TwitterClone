@@ -91,7 +91,8 @@ use GenServer
       nextID = state
       {content, hashtags, mentions} = tweetBody
       # insert into tweetsDB get size - index / key. insert value mei tuple.
-      Simulator.log("AT SERVER #{username} posted a new tweet : #{content}")
+      Simulator.log("TweetID: #{nextID} => #{username} posted a new tweet : #{content}")
+      # TweetID #{nextID} => 
       # index = Kernel.map_size(tweetsDB)
       spawn(fn->:ets.insert(:tweetsDB, {nextID, username, content})end)
       # tweetsDB = Map.put(tweetsDB, index, {username, content})
