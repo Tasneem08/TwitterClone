@@ -137,12 +137,14 @@ def simulate(ipAddr) do
             else
                 1
             end
-        
+    listofFequency = 
       for client <- 1..numClients do
             spawn(fn -> Client.generateMultipleTweets("user" <> Integer.to_string(client), delay * client, numThreads) end)
-            
             spawn(fn -> Client.createMultipleRetweets("user" <> Integer.to_string(client), numThreads) end)
+            {"user" <> Integer.to_string(client) , (numThreads*1000) / (delay * client)}
       end
+
+      IO.inspect listofFequency
 end
 
 def getSum([first|tail], sum) do
@@ -158,17 +160,24 @@ def assignfollowers(numClients, ipAddr) do
     # calculate cons somehow 
     
     harmonicList = for j <- 1..numClients do
-                     1/j
+                     round(1/j)
                    end
     c=(100/getSum(harmonicList,0))
 
     
     for tweeter <- 1..numClients, i <- 1..round(Float.floor(c/tweeter)) do
+
             follower = ("user" <> Integer.to_string(Enum.random(1..numClients)))
             mainUser = ("user" <> Integer.to_string(tweeter))
             spawn(fn -> Client.subscribe_to(follower, mainUser, ipAddr) end)
+        
     end
-    # GenServer.cast(:main_server,{:printMapping})
+
+    listofFollowersCount = 
+    for tweeter <- 1..numClients do
+    {"user" <> Integer.to_string(tweeter) , round(Float.floor(c/tweeter))}
+    end
+    IO.inspect listofFollowersCount
 end
 
 def calculateFrequency(numClients) do
